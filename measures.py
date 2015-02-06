@@ -69,5 +69,25 @@ class Measures():
 					data.append((node_1,node_2,d))
 		return data
 
+	# Calculate the common neighbor for sample nodes
+	def common_neighbor(self):
+		data = []
+		counted = {}
+		for x in xrange(0, len(self.sample_nodes)-1):
+			node_1 = self.sample_nodes[x]
+			for y in xrange(x+1, len(self.sample_nodes)-1):
+				node_2 = self.sample_nodes[y]
+				if (node_1, node_2) not in counted and (node_2, node_1) not in counted:
+					counted[(node_1, node_2)] = 1
+					set_intersection = set.intersection(set([k for k in self.graph[node_1]]), set([k for k in self.graph[node_2]]))
+					d = 0
+					for l in set_intersection:
+						d += self.graph[node_1][l]['weight'] + self.graph[node_2][l]['weight']
+					if len(set_intersection) > 0:
+						d = d/len(set_intersection)
+					data.append((node_1, node_2, d))
+		return data
+
+
 
 
