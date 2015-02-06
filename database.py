@@ -25,7 +25,7 @@ class Database(object):
 	# Returns a dict with user names as keys and 1 as value
 	def valid_users(self):
 		names = {}
-		for row in self.cursor.execute("SELECT DISTINCT `from` FROM (SELECT * FROM `mentions` WHERE `from` IN (SELECT `to` FROM `mentions`))"):
+		for row in self.cursor.execute("SELECT DISTINCT `from` FROM (SELECT * FROM `mentions` WHERE `from` IN (SELECT `to` FROM `mentions`) INTERSECT SELECT * FROM `mentions` WHERE `to` IN (SELECT `from` FROM `mentions`))"):
 			names[row[0]] = 1
 		return names
 

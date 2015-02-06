@@ -3,6 +3,7 @@
 
 from __future__ import division
 import networkx as nx 
+import copy
 
 class SocialNetwork():
 	# cut_off is the minimum weight below which a link is assumed to not exist
@@ -38,5 +39,7 @@ class SocialNetwork():
 	def __decrement_weight(self, beta):
 		for g in self.graph.edges(data=True):
 			self.graph[g[0]][g[1]]['weight'] = beta*self.graph[g[0]][g[1]]['weight']
-			if g[0] in self.sample_nodes and g[1] in self.sample_nodes:
-				print(g)
+
+	# Return a copy of the graph
+	def get_graph(self):
+		return self.graph
