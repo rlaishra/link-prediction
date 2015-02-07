@@ -34,12 +34,15 @@ class Measures():
 					set_union = set.union(set_x, set_y)
 
 					for l in set_intersection:
-						numerator += self.graph[node_1][l]['weight'] + self.graph[node_2][l]['weight']
+						numerator += (self.graph[node_1][l]['weight'] + self.graph[node_2][l]['weight'])/2
 					for l in set_union:
-						if l in self.graph[node_1]:
-							denominator += self.graph[node_1][l]['weight']
-						if l in self.graph[node_2]:
-							denominator += self.graph[node_2][l]['weight']
+						if l in set_intersection:
+							denominator += (self.graph[node_1][l]['weight'] + self.graph[node_2][l]['weight'])/2
+						else:
+							if l in self.graph[node_1]:
+								denominator += self.graph[node_1][l]['weight']
+							if l in self.graph[node_2]:
+								denominator += self.graph[node_2][l]['weight']
 					data.append((node_1,node_2,(numerator/denominator)))
 		return data
 
