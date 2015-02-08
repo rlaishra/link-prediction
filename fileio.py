@@ -10,6 +10,7 @@ class Fileio():
 		self.file_name_measure_jaccard = 'fileio/measure_jaccard.csv'
 		self.file_name_measure_adamicadar = 'fileio/measure_adamicadar.csv'
 		self.file_name_measure_commonneighbor = 'fileio/measure_commonneighbor.csv'
+		self.file_name_measure_preferentialattachment = 'fileio/measure_preferentialattachment.csv'
 
 	# Check if the valid users CSV file exist
 	def exist_valid_users(self):
@@ -133,6 +134,35 @@ class Fileio():
 	def read_measure_commonneighbor(self):
 		data = {}
 		with open(self.file_name_measure_commonneighbor, 'rb') as csvfile:
+			datareader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+			for row in datareader:
+				data[(row[0], row[1])] = [float(x) for x in row[2:]]
+		return data
+
+	# Check if preferential attchment measures CSV file exist
+	def exist_measure_preferentialattachment(self):
+		return os.path.exists(self.file_name_measure_preferentialattachment)
+
+	# Save the preferentialattachment data
+	# format of data (node1, node1): [m1, m2, m3, ...]
+	def save_measure_preferentialattachment(self, data):
+		# Flatten the data into a list of lists
+		# First two items in a list represents names of nodes
+		data_flat = []
+		for m in data:
+			data_flat.append([m[0], m[1]] + data[m])
+
+		# Save the data in a file
+		with open(self.file_name_measure_preferentialattachment, 'wb') as csvfile:
+			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+			for row in data_flat:
+				datawriter.writerow(row)
+
+	# Read preferentialattachment data from CSV file
+	# Retuns a dict with nodes tuple as key and measures as values
+	def read_measure_preferentialattachment(self):
+		data = {}
+		with open(self.file_name_measure_preferentialattachment, 'rb') as csvfile:
 			datareader = csv.reader(csvfile, delimiter=' ', quotechar='|')
 			for row in datareader:
 				data[(row[0], row[1])] = [float(x) for x in row[2:]]
