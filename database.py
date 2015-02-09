@@ -36,15 +36,26 @@ class Database(object):
 	# If users is not None, only links between users returned
 	def get_links(self, time_start, time_end, users):
 		links = {}
-		for row in self.cursor.execute("SELECT * FROM `mentions` WHERE `time` < ? AND `time` >= ?", (time_end, time_start)):
-			if users is not None and (row[0] not in users) and (row[1] not in users):
-				continue
-			if row[0] not in links:
-				links[row[0]] = {}
-			if row[1] in links[row[0]]:
-				links[row[0]][row[1]] = links[row[0]][row[1]] + 1
-			else:
-				links[row[0]][row[1]] = 1
+		if users is not None:
+			users_string = ''
+			for u in users:
+				users_string += '"' +u + '",'
+			users_string = users_string[:-1]
+			for row in self.cursor.execute("SELECT * FROM `mentions` WHERE `time` < ? AND `time` >= ? AND `from` IN ("+users_string+") AND `to` IN ("+users_string+")", (time_end, time_start)):
+				if row[0] not in links:
+					links[row[0]] = {}
+				if row[1] in links[row[0]]:
+					links[row[0]][row[1]] = links[row[0]][row[1]] + 1
+				else:
+					links[row[0]][row[1]] = 1
+		else:
+			for row in self.cursor.execute("SELECT * FROM `mentions` WHERE `time` < ? AND `time` >= ?", (time_end, time_start)):
+				if row[0] not in links:
+					links[row[0]] = {}
+				if row[1] in links[row[0]]:
+					links[row[0]][row[1]] = links[row[0]][row[1]] + 1
+				else:
+					links[row[0]][row[1]] = 1
 		return links
 
 	# Return the minimum and max time

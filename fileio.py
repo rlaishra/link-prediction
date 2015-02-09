@@ -11,6 +11,7 @@ class Fileio():
 		self.file_name_measure_adamicadar = 'fileio/measure_adamicadar.csv'
 		self.file_name_measure_commonneighbor = 'fileio/measure_commonneighbor.csv'
 		self.file_name_measure_preferentialattachment = 'fileio/measure_preferentialattachment.csv'
+		self.file_name_preprocess_distance_matrix = 'fileio/preporcess_distance_matrix.csv'
 
 	# Check if the valid users CSV file exist
 	def exist_valid_users(self):
@@ -166,6 +167,36 @@ class Fileio():
 			datareader = csv.reader(csvfile, delimiter=' ', quotechar='|')
 			for row in datareader:
 				data[(row[0], row[1])] = [float(x) for x in row[2:]]
+		return data
+
+	# Check if distance matrix CSV file exist
+	def exist_preprocess_distance_matrix(self):
+		return os.path.exists(self.file_name_preprocess_distance_matrix)
+
+	# Save the distance matrix data
+	def save_reprocess_distance_matrix(self, data):
+		# Flatten the data into a list of lists
+		# First two items in a list represents names of nodes
+		data_flat = []
+		for m in data:
+			for n in data[m]:
+				data_flat.append([m, n + data[m][n]])
+
+		# Save the data in a file
+		with open(self.file_name_preprocess_distance_matrix, 'wb') as csvfile:
+			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+			for row in data_flat:
+				datawriter.writerow(row)
+
+	# Read distance matrix data from CSV file
+	def read_reprocess_distance_matrix(self):
+		data = {}
+		with open(self.file_name_preprocess_distance_matrix, 'rb') as csvfile:
+			datareader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+			for row in datareader:
+				if row[0] not in data:
+					data[row[0]] = {}
+				data[row[0]][row[1]] = data[2]
 		return data
 
 

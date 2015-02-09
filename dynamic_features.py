@@ -1,6 +1,6 @@
 # Gets the features over time
 
-import database, graph, random, measures, fileio
+import database, graph, random, measures, fileio, preprocess
 from pprint import pprint
 
 
@@ -31,6 +31,13 @@ def main():
 		users_sample = fio.read_sample_users()
 
 	time_start, time_end = db.get_time_min_max()
+	
+	prep = preprocess.Preprocess()
+	features = prep.outlier_nodes(db.get_links(time_start, time_end, random.sample(users, 5000)))
+	pprint(features)
+	pprint(len(features))
+
+	return 0
 
 	i = 1
 	adamic_adar = {}
@@ -46,7 +53,7 @@ def main():
 
 		while time_start + i*delta_t < time_end:
 			print(i)
-			edges = db.get_links(time_start+(i-1)*delta_t, time_start+i*delta_t, None)
+			edges = db.get_links(time_start+(i-1)*delta_t, time_start+i*delta_t, users_sample)
 			sn.add_edges(edges, beta)
 			m = measures.Measures(sn.get_graph(), users_sample)
 			
@@ -79,8 +86,8 @@ def main():
 					preferential_attchment[(d[0],d[1])].append(d[2])
 
 			i += 1
-			if i > 5:
-				break
+			#if i > 5:
+			#	break
 
 		# If CSV exist, read from that
 		# Otherwise save the data
@@ -134,7 +141,7 @@ def main():
 			nz_pref[n] = preferential_attchment[n]
 
 	#pprint(len(nz_adamic))
-	pprint(nz_pref)
+	#pprint(nz_pref)
 
 	#for n in nz_jaccard:
 	#	for x in xrange(1,len(nz_jaccard[n]) -1):
