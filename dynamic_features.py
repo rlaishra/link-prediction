@@ -33,8 +33,9 @@ def main():
 	time_start, time_end = db.get_time_min_max()
 	
 	prep = preprocess.Preprocess()
-	features = prep.outlier_nodes(db.get_links(time_start, time_end, random.sample(users, 5000)))
-	pprint(features)
+	pprint(len(users))
+	features = prep.outlier_nodes(db.get_links(time_start, time_end, random.sample(users, 20000)))
+	#pprint(features)
 	pprint(len(features))
 
 	return 0

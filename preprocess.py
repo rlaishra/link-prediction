@@ -35,7 +35,6 @@ class Preprocess(object):
 
 		if not fio.exist_preprocess_distance_matrix():
 			distance_matrix = self.__distance_matrix(features)
-			#pprint(distance_matrix)
 			#fio.save_reprocess_distance_matrix(distance_matrix)
 		else:
 			distance_matrix = fio.read_reprocess_distance_matrix()
