@@ -180,7 +180,7 @@ class Fileio():
 		data_flat = []
 		for m in data:
 			for n in data[m]:
-				data_flat.append([m, n + data[m][n]])
+				data_flat.append([m, n, data[m][n]])
 
 		# Save the data in a file
 		with open(self.file_name_preprocess_distance_matrix, 'wb') as csvfile:
@@ -196,7 +196,7 @@ class Fileio():
 			for row in datareader:
 				if row[0] not in data:
 					data[row[0]] = {}
-				data[row[0]][row[1]] = data[2]
+				data[row[0]][row[1]] = row[2]
 		return data
 
 

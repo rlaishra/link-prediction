@@ -33,10 +33,12 @@ def main():
 	time_start, time_end = db.get_time_min_max()
 	
 	prep = preprocess.Preprocess()
-	pprint(len(users))
-	features = prep.outlier_nodes(db.get_links(time_start, time_end, random.sample(users, 20000)))
-	#pprint(features)
-	pprint(len(features))
+	pprint(len(users_sample))
+	features = prep.outlier_nodes(db.get_links(time_start, time_end, users_sample))
+	
+	for f in features:
+		if f[2] > 2:
+			print(f)
 
 	return 0
 
