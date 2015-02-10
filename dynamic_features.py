@@ -6,7 +6,7 @@ from pprint import pprint
 
 def main():
 	cutoff = 0.1 	# Links below this weight are considered to be broken
-	frac = 0.02		# Fraction of the total valid users to sample
+	frac = 0.01		# Fraction of the total valid users to sample
 	delta_t = 3600	# Time interval in seconds
 	beta = 0.9		# Link weight decay factor
 
@@ -31,11 +31,12 @@ def main():
 		users_sample = fio.read_sample_users()
 
 	time_start, time_end = db.get_time_min_max()
-	
+	print(len(users_sample))
 	prep = preprocess.Preprocess()
-	features = prep.outlier_nodes(db.get_links(time_start, time_end, random.sample(users, 5000)))
-	pprint(features)
-	pprint(len(features))
+	
+	# Check if there are outliers in the selected sample
+	outliers = prep.outlier_nodes(db.get_links(time_start, time_end, users_sample), users_sample)
+	pprint(len(outliers))
 
 	return 0
 

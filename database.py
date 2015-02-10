@@ -41,7 +41,7 @@ class Database(object):
 			for u in users:
 				users_string += '"' +u + '",'
 			users_string = users_string[:-1]
-			for row in self.cursor.execute("SELECT * FROM `mentions` WHERE `time` < ? AND `time` >= ? AND `from` IN ("+users_string+") AND `to` IN ("+users_string+")", (time_end, time_start)):
+			for row in self.cursor.execute("SELECT * FROM `mentions` WHERE `time` < ? AND `time` >= ? AND (`from` IN ("+users_string+") OR `to` IN ("+users_string+"))", (time_end, time_start)):
 				if row[0] not in links:
 					links[row[0]] = {}
 				if row[1] in links[row[0]]:
