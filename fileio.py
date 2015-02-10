@@ -196,7 +196,7 @@ class Fileio():
 			for row in datareader:
 				if row[0] not in data:
 					data[row[0]] = {}
-				data[row[0]][row[1]] = row[2]
+				data[row[0]][row[1]] = float(row[2])
 		return data
 
 

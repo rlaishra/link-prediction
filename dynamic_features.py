@@ -31,14 +31,16 @@ def main():
 		users_sample = fio.read_sample_users()
 
 	time_start, time_end = db.get_time_min_max()
-	
 	prep = preprocess.Preprocess()
-	pprint(len(users_sample))
-	features = prep.outlier_nodes(db.get_links(time_start, time_end, users_sample))
 	
-	for f in features:
-		if f[2] > 2:
-			print(f)
+	# Check if there are outliers in the selected sample
+	outliers = prep.outlier_nodes(db.get_links(time_start, time_end, users_sample), users_sample, 5, 0.1, True)
+	pprint(len(outliers))
+	pprint(len(users_sample))
+	# Remove the outliers from the users_sample
+	for n in outliers:
+		users_sample.remove(n)
+	pprint(len(users_sample))
 
 	return 0
 
