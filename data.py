@@ -62,7 +62,8 @@ class Data():
 			prep = preprocess.Preprocess()
 	
 			# Check if there are outliers in the selected sample
-			outliers = prep.outlier_nodes(self._db.get_links(time_start, time_end, sample_users), sample_users, self._config.density_neighbors, self._config.density_cutoff, True)
+			links = self._db.get_links(time_start, time_end, sample_users)
+			outliers = prep.outlier_nodes(links, sample_users, self._config.density_neighbors, self._config.density_cutoff, True)
 			if self._run.verbose:
 				print(str(len(outliers)) + ' outliers found')
 			

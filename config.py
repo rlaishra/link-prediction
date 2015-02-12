@@ -20,6 +20,8 @@ class Run():
 # Config for misc stuff
 class Data():
 	def __init__(self):
+		self._data = Graph()
+
 		# The sample size of users to get from valid users
 		self._sample_size = 2500
 
@@ -30,7 +32,7 @@ class Data():
 		self._density_neighbors = 5
 
 		# The minimum density below which node is considered an outlier
-		self._density_cutoff = 0.1
+		self._density_cutoff = self._data.density_cutoff
 
 	@property
 	def sample_size(self):
@@ -52,6 +54,7 @@ class Data():
 # Config for graph
 class Graph():
 	def __init__(self):
+		
 		# Lower limit of a link weight
 		# Link is considered broken 
 		self._min_weight = 0.1
@@ -60,6 +63,9 @@ class Graph():
 		# Between 0 and 1
 		self._decay_factor = 0.9
 
+		# The minimum density below which node is considered an outlier
+		self._density_cutoff = 0.1
+
 	@property
 	def min_weight(self):
 		return self._min_weight
@@ -67,6 +73,10 @@ class Graph():
 	@property 
 	def decay_factor(self):
 		return self._decay_factor
+
+	@property 
+	def density_cutoff(self):
+		return self._density_cutoff
 
 # Database config
 class Database():

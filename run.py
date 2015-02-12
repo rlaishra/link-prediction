@@ -1,7 +1,8 @@
 # The main script
 # invoke everything from this script
 
-import sys, config, data
+import config, data, degree_plot, dynamic_features
+import sys
 
 # Set run time configs
 class RuntimeConfig():
@@ -31,34 +32,55 @@ class Run():
 	def __init__(self, config_run):
 		self._config_run = config_run
 		self._functions = {
-			'test' 			: self._test,
-			'valid_users'	: self._valid_users,
-			'sample_users'	: self._sample_users,
+			'test' 				: self._test,
+			'valid_users'		: self._valid_users,
+			'sample_users'		: self._sample_users,
+			'degree_plot'		: self._degree_plot,
+			'dynamic_features'	: self._dynamic_features,
 		}
 
 	def start(self, argv):
-		if argv not in self._functions.keys():
+		if argv[0] not in self._functions.keys():
 			print('Invalid Parameter')
 			return False
-		self._functions[argv]()
+		self._functions[argv[0]](argv[1:])
 
 	# A test function
-	def _test(self):
+	def _test(self, argv):
 		dat = data.Data(self._config_run)
 		dat.get_valid_users()
 
 	# Generate valid users and save them in the cache
-	def _valid_users(self):
+	def _valid_users(self, argv):
 		dat = data.Data(self._config_run)
 		count = len(dat.get_valid_users())
 		print(str(count) + ' valid users generated')
 
 	# Generate sample users and save them in the cache
-	def _sample_users(self):
+	def _sample_users(self, argv):
 		dat = data.Data(self._config_run)
 		count = len(dat.get_sample_users())
 		print(str(count) + ' sample users generated')
 
+	# Degree plot
+	# Cululative or time series
+	def _degree_plot(self, argv):
+		plot_type = argv[0]
+		if plot_type not in ['cumulative', 'time_series']:
+			print('Invalid plot type')
+			return False
+		plt = degree_plot.DegreePlot(self._config_run)
+		if plot_type == 'cumulative':
+			plt.cumulative()
+		else:
+			pass
+
+	def _dynamic_features(self, argv):
+		fea = dynamic_features.DynamicFeatures(self._config_run)
+		fea.generate()
+
+# Command format:
+# python run.py -<run options> <task_name> <task_arg>
 
 if __name__ == '__main__':
 	if len(sys.argv) < 3:
@@ -68,4 +90,4 @@ if __name__ == '__main__':
 		config_run = r.set(sys.argv[1])
 
 		run = Run(config_run)
-		run.start(sys.argv[2])
+		run.start(sys.argv[2:])
