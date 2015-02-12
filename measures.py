@@ -6,9 +6,12 @@ import math
 class Measures():
 	# graph is the required graph
 	# sample_nodes can be list or dict
-	def __init__(self, graph, sample_nodes):
+	def __init__(self, graph=None, sample_nodes=None):
 		self.graph = graph
-		self.sample_nodes = [n for n in sample_nodes]
+		if sample_nodes is not None:
+			self.sample_nodes = [n for n in sample_nodes]
+		else:
+			self.sample_nodes = sample_nodes
 
 	# Calulate all the available measures
 	# Set false for any measure not wanted
@@ -200,6 +203,30 @@ class Measures():
 		score = p1*p2
 
 		return score
+
+	# Get the in degree from the adjacency list 
+	def out_degree(self, adjacency_list, sample_nodes):
+		out_degree = {}
+
+		for node in sample_nodes:
+			if node in adjacency_list:
+				out_degree[node] = len(adjacency_list[node])
+			else:
+				out_degree[node] = 0
+		return out_degree
+
+	# Caluculate the out degree from adjacency list
+	def in_degree(self, adjacency_list, sample_nodes):
+		in_degree = {}
+
+		for n in sample_nodes:
+			in_degree[n] = 0
+
+		for x in adjacency_list:
+			for y in adjacency_list[x]:
+				if sample_nodes is None or y in sample_nodes:
+					in_degree[y] += 1
+		return in_degree
 
 
 

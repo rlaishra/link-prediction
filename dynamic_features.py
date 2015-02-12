@@ -1,19 +1,18 @@
 # Gets the features over time
 
-import database, graph, random, measures, fileio, preprocess
+import database, graph, random, measures, cache, preprocess
 from pprint import pprint
 
 
 def main():
 	cutoff = 0.1 	# Links below this weight are considered to be broken
-	frac = 0.02		# Fraction of the total valid users to sample
-	delta_t = 3600	# Time interval in seconds
+	sample_size = 2500		# Fraction of the total valid users to sample
+	delta_t = 2*3600	# Time interval in seconds
 	beta = 0.9		# Link weight decay factor
+  
+	fio = cache.Cache()
 
-
-	fio = fileio.Fileio()
-
-	db = database.Database('database.db')
+	db = database.Database()
 	db.open()
 
 	# Get all the valid users
@@ -25,7 +24,7 @@ def main():
 
 	# Because of computational limitaions, we will do annalysis on only a fraction of nodes
 	if not fio.exist_sample_users():
-		users_sample = random.sample(users, int(frac*len(users)))
+		users_sample = random.sample(users, sample_size)
 		fio.save_sample_users(users_sample)
 	else:
 		users_sample = fio.read_sample_users()
@@ -34,15 +33,13 @@ def main():
 	prep = preprocess.Preprocess()
 	
 	# Check if there are outliers in the selected sample
-	outliers = prep.outlier_nodes(db.get_links(time_start, time_end, users_sample), users_sample, 5, 0.1, True)
+	outliers = prep.outlier_nodes(db.get_links(time_start, time_end, users_sample), users_sample, 10, 0.1, True)
 	pprint(len(outliers))
 	pprint(len(users_sample))
 	# Remove the outliers from the users_sample
 	for n in outliers:
 		users_sample.remove(n)
 	pprint(len(users_sample))
-
-	return 0
 
 	i = 1
 	adamic_adar = {}
@@ -91,8 +88,8 @@ def main():
 					preferential_attchment[(d[0],d[1])].append(d[2])
 
 			i += 1
-			#if i > 5:
-			#	break
+			if i > 5:
+				break
 
 		# If CSV exist, read from that
 		# Otherwise save the data
@@ -123,45 +120,6 @@ def main():
 		adamic_adar = fio.read_measure_adamicadar()
 		common_neighbor = fio.read_measure_commonneighbor()
 		preferential_attchment = fio.read_measure_preferentialattchment()
-
-	print(len(preferential_attchment))
-
-	# Extract non zero values
-	nz_adamic = {}
-	nz_jaccard = {}
-	nz_commnei = {}
-	nz_pref = {}
-
-	for n in adamic_adar:
-		if not all(x == 0 for x in adamic_adar[n]):
-			nz_adamic[n] = adamic_adar[n]
-	for n in jaccard:
-		if not all(x == 0 for x in jaccard[n]):
-			nz_jaccard[n] = jaccard[n]
-	for n in common_neighbor:
-		if not all(x == 0 for x in common_neighbor[n]):
-			nz_commnei[n] = common_neighbor[n]
-	for n in preferential_attchment:
-		if not all(x == 0 for x in preferential_attchment[n]):
-			nz_pref[n] = preferential_attchment[n]
-
-	#pprint(len(nz_adamic))
-	#pprint(nz_pref)
-
-	#for n in nz_jaccard:
-	#	for x in xrange(1,len(nz_jaccard[n]) -1):
-	#		if nz_jaccard[n][x-1] > 0 and nz_jaccard[n][x] > 0:
-	#			print(nz_jaccard[n][x]/nz_jaccard[n][x-1])
-
-	#pprint(len(nz_jaccard))
-
-	#for n in nz_commnei:
-	#	for x in xrange(1,len(nz_commnei[n]) -1):
-	#		if nz_commnei[n][x-1] > 0 and nz_commnei[n][x] > 0:
-	#			print(nz_commnei[n][x]/nz_commnei[n][x-1])
-
-	#pprint(len(nz_commnei))
-
 
 	db.close()
 

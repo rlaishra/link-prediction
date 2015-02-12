@@ -1,12 +1,13 @@
 # The main database class 
 
 from __future__ import division
-import sqlite3, time
+import sqlite3, time, config
 
 class Database(object):
 
-	def __init__(self, file_name):
-		self.file_name = file_name
+	def __init__(self):
+		db_config = config.Database()
+		self.file_name = db_config.name
 
 	# Open a database connection
 	def open(self):

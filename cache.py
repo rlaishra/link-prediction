@@ -1,24 +1,30 @@
-import csv, os.path
+import csv, os.path, config
 
 # This class is used to save and read stuffs into file
+# Always check with exist_ function before reading
 
 
-class Fileio():
+class Cache():
 	def __init__(self):
-		self.file_name_valid_users = 'fileio/valid_users.csv'
-		self.file_name_sample_users = 'fileio/sample_users.csv'
-		self.file_name_measure_jaccard = 'fileio/measure_jaccard.csv'
-		self.file_name_measure_adamicadar = 'fileio/measure_adamicadar.csv'
-		self.file_name_measure_commonneighbor = 'fileio/measure_commonneighbor.csv'
-		self.file_name_measure_preferentialattachment = 'fileio/measure_preferentialattachment.csv'
-		self.file_name_preprocess_distance_matrix = 'fileio/preporcess_distance_matrix.csv'
+		self._config = config.Cache()
+
+		self.file_name_valid_users = self._config.valid_users
+		self.file_name_sample_users = self._config.sample_users
+		self.file_name_measure_jaccard = self._config.measure_jaccard
+		self.file_name_measure_adamicadar = self._config.measure_adamic_adar
+		self.file_name_measure_commonneighbor = self._config.measure_common_neighbor
+		self.file_name_measure_preferentialattachment = self._config.measure_preferential_attachment
+		self.file_name_preprocess_distance_matrix = self._config.preprocess_distance_matrix
 
 	# Check if the valid users CSV file exist
 	def exist_valid_users(self):
-		return os.path.exists(self.file_name_valid_users)
+		return os.path.exists(self.file_name_valid_users) and self._config.is_enabled
 
 	# Save valid users into file
 	def save_valid_users(self, data):
+		if not self._config.is_enabled:
+			return False
+
 		with open(self.file_name_valid_users, 'wb') as csvfile:
 			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
 			for row in data:
@@ -35,10 +41,13 @@ class Fileio():
 
 	# Check if the valid users CSV file exist
 	def exist_sample_users(self):
-		return os.path.exists(self.file_name_sample_users)
+		return os.path.exists(self.file_name_sample_users) and self._config.is_enabled
 
 	# Save valid users into file
 	def save_sample_users(self, data):
+		if not self._config.is_enabled:
+			return False
+
 		with open(self.file_name_sample_users, 'wb') as csvfile:
 			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
 			for row in data:
@@ -55,11 +64,14 @@ class Fileio():
 
 	# Check if jaccard measures CSV file exist
 	def exist_measure_jaccard(self):
-		return os.path.exists(self.file_name_measure_jaccard)
+		return os.path.exists(self.file_name_measure_jaccard) and self._config.is_enabled
 
 	# Save the Jaccard measures data
 	# format of data (node1, node1): [m1, m2, m3, ...]
 	def save_measure_jaccard(self, data):
+		if not self._config.is_enabled:
+			return False
+
 		# Flatten the data into a list of lists
 		# First two items in a list represents names of nodes
 		data_flat = []
@@ -84,11 +96,14 @@ class Fileio():
 
 	# Check if adamic adar measures CSV file exist
 	def exist_measure_adamicadar(self):
-		return os.path.exists(self.file_name_measure_adamicadar)
+		return os.path.exists(self.file_name_measure_adamicadar) and self._config.is_enabled
 
 	# Save the adamic adar data
 	# format of data (node1, node1): [m1, m2, m3, ...]
 	def save_measure_adamicadar(self, data):
+		if not self._config.is_enabled:
+			return False
+
 		# Flatten the data into a list of lists
 		# First two items in a list represents names of nodes
 		data_flat = []
@@ -113,11 +128,14 @@ class Fileio():
 
 	# Check if common neighbor measures CSV file exist
 	def exist_measure_commonneighbor(self):
-		return os.path.exists(self.file_name_measure_commonneighbor)
+		return os.path.exists(self.file_name_measure_commonneighbor) and self._config.is_enabled
 
 	# Save the common neighbor data
 	# format of data (node1, node1): [m1, m2, m3, ...]
 	def save_measure_commonneighbor(self, data):
+		if not self._config.is_enabled:
+			return False
+
 		# Flatten the data into a list of lists
 		# First two items in a list represents names of nodes
 		data_flat = []
@@ -142,11 +160,14 @@ class Fileio():
 
 	# Check if preferential attchment measures CSV file exist
 	def exist_measure_preferentialattachment(self):
-		return os.path.exists(self.file_name_measure_preferentialattachment)
+		return os.path.exists(self.file_name_measure_preferentialattachment) and self._config.is_enabled
 
 	# Save the preferentialattachment data
 	# format of data (node1, node1): [m1, m2, m3, ...]
 	def save_measure_preferentialattachment(self, data):
+		if not self._config.is_enabled:
+			return False
+
 		# Flatten the data into a list of lists
 		# First two items in a list represents names of nodes
 		data_flat = []
@@ -171,10 +192,13 @@ class Fileio():
 
 	# Check if distance matrix CSV file exist
 	def exist_preprocess_distance_matrix(self):
-		return os.path.exists(self.file_name_preprocess_distance_matrix)
+		return os.path.exists(self.file_name_preprocess_distance_matrix) and self._config.is_enabled
 
 	# Save the distance matrix data
 	def save_reprocess_distance_matrix(self, data):
+		if not self._config.is_enabled:
+			return False
+
 		# Flatten the data into a list of lists
 		# First two items in a list represents names of nodes
 		data_flat = []

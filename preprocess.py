@@ -1,21 +1,23 @@
 # Preprocessing of data like detect outliers etc
-
+from __future__ import division
 import networkx as nx 
 import matplotlib.pyplot as plt
-import math, fileio, operator
+import math, cache, operator, measures
 from scipy.spatial import distance
 from pprint import pprint
 
 class Preprocess(object):
 	
 	def __init__(self):
-		super(Preprocess, self).__init__()
+		self._cache = cache.Cache()
 		
 	# Detect nodes that are outliers based on in degree and out degree
 	# Uses density based outlier detection
 	def outlier_nodes(self, adjacency_list, users_list=None, k=5, min_density=0.1, show_plot=False):
-		in_degree = self.__in_degree(adjacency_list, users_list)
-		out_degree = self.__out_degree(adjacency_list, users_list)
+		mes = measures.Measures()
+
+		in_degree = mes.in_degree(adjacency_list, users_list)
+		out_degree = mes.out_degree(adjacency_list, users_list)
 
 		#construct set of all nodes
 		all_nodes = list(set.union(set(in_degree), set(out_degree)))
@@ -32,13 +34,11 @@ class Preprocess(object):
 				f2 = out_degree[x]
 			features[x] = [f1, f2]
 
-		fio = fileio.Fileio()
-
-		if not fio.exist_preprocess_distance_matrix():
+		if not self._cache.exist_preprocess_distance_matrix():
 			distance_matrix = self.__distance_matrix(features)
-			fio.save_reprocess_distance_matrix(distance_matrix)
+			self._cache.save_reprocess_distance_matrix(distance_matrix)
 		else:
-			distance_matrix = fio.read_reprocess_distance_matrix()
+			distance_matrix = self._cache.read_reprocess_distance_matrix()
 
 		nearest_nodes = self.__get_k_neartest(distance_matrix, k)
 
@@ -71,32 +71,6 @@ class Preprocess(object):
 			plt.savefig('outliers_plot.png')
 
 		return outliers
-
-	# Get the in degree from the adjacency list 
-	def __out_degree(self, adjacency_list, users_list=None):
-		out_degree = {}
-
-		for node in users_list:
-			if node in adjacency_list:
-				out_degree[node] = len(adjacency_list[node])
-			else:
-				out_degree[node] = 0
-
-		return out_degree
-
-	# Caluculate the out degree from adjacency list
-	def __in_degree(self, adjacency_list, users_list=None):
-		in_degree = {}
-
-		for n in users_list:
-			in_degree[n] = 0
-
-		for x in adjacency_list:
-			for y in adjacency_list[x]:
-				if users_list is None or y in users_list:
-					in_degree[y] += 1
-
-		return in_degree
 
 	# Calculate the distance between every two pairs of nodes
 	def __distance_matrix(self, features, k=5):
