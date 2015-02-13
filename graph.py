@@ -10,6 +10,7 @@ class SocialNetwork():
 	# sample_nodes are the nodes to analyse. None if we want to analyse all nodes
 	def __init__(self, cut_off, sample_nodes):
 		self.graph = nx.DiGraph()
+		self.reverse_graph = nx.DiGraph()
 		self.weight_cut_off = cut_off
 		self.sample_nodes = sample_nodes
 	
@@ -27,6 +28,7 @@ class SocialNetwork():
 	# new_weight = weight_in_adjaceny_list + beta * previous_weight
 	def add_edges(self, adjacency_list, beta):
 		self.__decrement_weight(beta)
+		# Add edges to normal graph
 		for user1 in adjacency_list:
 			for user2 in adjacency_list[user1]:
 				if user1 != user2:
@@ -35,11 +37,18 @@ class SocialNetwork():
 					else:
 						self.graph.add_edge(user1, user2, weight=adjacency_list[user1][user2])
 
+		#Add edges to revrse graph
+
+
 	# Decrement weight in links according to beta
 	def __decrement_weight(self, beta):
 		for g in self.graph.edges(data=True):
 			self.graph[g[0]][g[1]]['weight'] = beta*self.graph[g[0]][g[1]]['weight']
+		for g in self.reverse_graph.edges(data=True):
+			self.reverse_graph[g[0]][g[1]]['weight'] = beta*self.reverse_graph[g[0]][g[1]]['weight']
 
 	# Return a copy of the graph
 	def get_graph(self):
 		return self.graph
+
+
