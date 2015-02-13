@@ -19,6 +19,7 @@ class SocialNetwork():
 	def initialize_nodes(self, nodes):
 		for node in nodes:
 			self.graph.add_node(node)
+			self.reverse_graph.add_node(node)
 
 	# Add edges to graph from adjacency list
 	# If edge already exist, it is decremented according to beta and new value added to it
@@ -32,10 +33,17 @@ class SocialNetwork():
 		for user1 in adjacency_list:
 			for user2 in adjacency_list[user1]:
 				if user1 != user2:
+					# Add normal normal edge
 					if self.graph.has_edge(user1, user2):
 						self.graph[user1][user2]['weight'] += adjacency_list[user1][user2]
 					else:
 						self.graph.add_edge(user1, user2, weight=adjacency_list[user1][user2])
+					
+					# Add reverse edge
+					if self.graph.has_edge(user2, user1):
+						self.reverse_graph[user2][user1]['weight'] += adjacency_list[user2][user1]
+					else:
+						self.reverse_graph.add_edge(user2, user1, weight=adjacency_list[user2][user1])
 
 		#Add edges to revrse graph
 
@@ -50,5 +58,9 @@ class SocialNetwork():
 	# Return a copy of the graph
 	def get_graph(self):
 		return self.graph
+
+	# Return a copy of the graph
+	def get_reverse_graph(self):
+		return self.reverse_graph
 
 
