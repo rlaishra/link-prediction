@@ -21,6 +21,12 @@ class DynamicFeatures():
 	# j -> jaccard
 	# c -> common neighbors
 	def generate(self, features_list=None):
+		# if feature_list is not None, check to make sure that the vars are valid
+		allowed_measures = ['a', 'j', 'c', 'p']
+		if not all([x in allowed_measures for x in features_list]):
+			print('Invalid measure')
+			return False
+
 		# Generate users
 		users_valid = self._data.get_valid_users()
 		users_sample = self._data.get_sample_users()
@@ -40,6 +46,11 @@ class DynamicFeatures():
 			sn = graph.SocialNetwork(self._config.density_cutoff, users_sample)
 			sn.initialize_nodes(users_valid)
 
+			is_jaccard = (not self._cache.exist_measure_jaccard()) and (features_list is None or 'j' in features_list)
+			is_adamic = (not self._cache.exist_measure_adamicadar()) and (features_list is None or 'a' in features_list)
+			is_cnome = (not self._cache.exist_measure_commonneighbor()) and (features_list is None or 'c' in features_list)
+			is_prefa = (not self._cache.exist_measure_preferentialattachment()) and (features_list is None or 'p' in features_list)
+
 			while time_start + i*self._config_data.delta_t < time_end:
 				if self._run.verbose:
 					print(str(i) + ' Calculating features between '+str(time_start+(i-1)*self._config_data.delta_t)+' and '+str(time_start+i*self._config_data.delta_t))
@@ -53,16 +64,11 @@ class DynamicFeatures():
 				sn.add_edges(edges, self._config.decay_factor)
 
 				# Initilize measures class
-				m = measures.Measures(sn.get_graph(), users_sample)
+				m = measures.Measures(sn, users_sample)
 
 				# Get the measure values only if they dont exist in file
 				if self._run.verbose:
 					print('Generating features')
-				
-				is_jaccard = (not self._cache.exist_measure_jaccard()) and (features_list is None or 'j' in features_list)
-				is_adamic = (not self._cache.exist_measure_adamicadar()) and (features_list is None or 'a' in features_list)
-				is_cnome = (not self._cache.exist_measure_commonneighbor()) and (features_list is None or 'c' in features_list)
-				is_prefa = (not self._cache.exist_measure_preferentialattachment()) and (features_list is None or 'p' in features_list)
 
 				jac, ada, cne, pref = m.combined( is_jaccard , is_adamic, is_cnome, is_prefa)
 				
@@ -133,30 +139,37 @@ class DynamicFeatures():
 				if self._run.verbose:
 					print('Saving preferential attachment to cache')
 				self._cache.save_measure_preferentialattachment(preferential_attchment)
-		else:
-			# If diasances are in cache, read from cache
-			if self._run.verbose:
-				print('Cache found reading from cache')
-			#All the measures exist in CSV files
-			# So read from file instead of recalculating again
-			if 'j' in features_list:
-				if self._run.verbose:
-					print('Reading Jaccard from cache')
-				jaccard = self._cache.read_measure_jaccard()
-
-			if 'a' in features_list:
-				if self._run.verbose:
-					print('Reading Adamic Adar from cache')
-				adamic_adar = self._cache.read_measure_adamicadar()
-
-			if 'c' in features_list:
-				if self._run.verbose:
-					print('Reading Common neighbors from cache')
-				common_neighbor = self._cache.read_measure_commonneighbor()
-
-			if 'p' in features_list:
-				if self._run.verbose:
-					print('Reading preserential attachment from cache')
-				preferential_attchment = self._cache.read_measure_preferentialattchment()
 
 		db.close()
+
+
+	# Read the dynamic features are return them
+	# Ca only read one value at a time
+	def read(self, feature):
+		if feature not in ['a', 'j', 'c', 'p']:
+			print('Invalid measure')
+			return False
+
+		if feature is 'j':
+			if self._run.verbose:
+				print('Reading Jaccard from cache')
+			jaccard = self._cache.read_measure_jaccard()
+			return jaccard
+
+		if feature is 'a':
+			if self._run.verbose:
+				print('Reading Adamic Adar from cache')
+			adamic_adar = self._cache.read_measure_adamicadar()
+			return adamic_adar
+
+		if feature is 'c':
+			if self._run.verbose:
+				print('Reading Common neighbors from cache')
+			common_neighbor = self._cache.read_measure_commonneighbor()
+			return common_neighbor
+
+		if feature is 'p':
+			if self._run.verbose:
+				print('Reading preserential attachment from cache')
+			preferential_attchment = self._cache.read_measure_preferentialattchment()
+			return preferential_attchment

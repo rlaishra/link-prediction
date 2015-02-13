@@ -47,8 +47,14 @@ class Run():
 
 	# A test function
 	def _test(self, argv):
-		dat = data.Data(self._config_run)
-		dat.get_valid_users()
+		fea = dynamic_features.DynamicFeatures(self._config_run)
+		values = fea.read(argv[0])
+		counter = 0
+		for l in values:
+			if any([x > 0 for x in values[l]]):
+				counter += 1
+		print(counter)
+		print(len(values))
 
 	# Generate valid users and save them in the cache
 	def _valid_users(self, argv):

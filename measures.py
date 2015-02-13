@@ -7,8 +7,10 @@ import math
 class Measures():
 	# graph is the required graph
 	# sample_nodes can be list or dict
-	def __init__(self, graph=None, sample_nodes=None):
-		self._graph = graph
+	def __init__(self, sn=None, sample_nodes=None):
+		self._sn = sn
+		if self._sn is not None:
+			self._graph = self._sn.get_graph()
 		if sample_nodes is not None:
 			self._sample_nodes = [n for n in sample_nodes]
 		else:
@@ -37,7 +39,7 @@ class Measures():
 					set_intersection_out = set.intersection(set_x, set_y)
 					set_union_out = set.union(set_x, set_y)
 
-					graph_in = self._graph.reverse(copy=True)
+					graph_in = self._sn.get_reverse_graph()
 
 					set_x = set([k for k in graph_in[node_1]])
 					set_y = set([k for k in graph_in[node_2]])
@@ -54,7 +56,7 @@ class Measures():
 						adamic.append((node_1, node_2, value_adam))
 
 					if common_neighbor:
-						value_comm = self.__nodes_common_neighbor(node_1, node_2, set_intersection_in, set_intersection_out)
+						value_comm = self.__nodes_common_neighbor(node_1, node_2, set_intersection_out, set_intersection_in)
 						commnei.append((node_1, node_2, value_comm))
 
 					if preferential_attachment:
@@ -128,7 +130,7 @@ class Measures():
 	# Set intersection and union are optional
 	# It will be calculayed by here if not provided
 	def __nodes_jaccard(self, node_1, node_2, set_intersection_out=None, set_union_out=None, set_intersection_in=None, set_union_in=None):
-		graph_in = self._graph.reverse(copy=True)
+		graph_in = self._sn.get_reverse_graph()
 
 		# Need to convert to graph is we are to calculate either set union or set intersection
 		if set_intersection_out is None or set_union_out is None or set_intersection_in is None or set_union_in is None:
@@ -189,7 +191,7 @@ class Measures():
 	# Set intersection and union are optional
 	# It will be calculayed by here if not provided
 	def __nodes_adamic_adar(self, node_1, node_2, set_intersection_out=None, set_intersection_in=None):
-		graph_in = self._graph.reverse(copy=True)
+		graph_in = self._sn.get_reverse_graph()
 		score = 0
 		
 		# If set intersection is not provided, calculate
@@ -227,8 +229,7 @@ class Measures():
 	# It will be calculayed by here if not provided
 	def __nodes_common_neighbor(self, node_1, node_2, set_intersection_out=None, set_intersection_in=None):
 		score = 0
-		graph_in = self._graph.reverse(copy=True)
-
+		graph_in = self._sn.get_reverse_graph()
 		if set_intersection_out is None or set_intersection_in is None:
 			set_intersection_out = set.intersection(set([k for k in self._graph[node_1]]), set([k for k in self._graph[node_2]]))
 			set_intersection_in = set.intersection(set([k for k in graph_in[node_1]]), set([k for k in graph_in[node_2]]))
@@ -243,7 +244,7 @@ class Measures():
 	# Calculate the preferential attachment of two nodes 
 	# Needs to specify the two nodes
 	def __nodes_preferential_attachment(self, node_1, node_2):
-		graph_in = self._graph.reverse(copy=True)
+		graph_in = self._sn.get_reverse_graph()
 
 		score = 0
 

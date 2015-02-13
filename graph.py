@@ -40,13 +40,10 @@ class SocialNetwork():
 						self.graph.add_edge(user1, user2, weight=adjacency_list[user1][user2])
 					
 					# Add reverse edge
-					if self.graph.has_edge(user2, user1):
-						self.reverse_graph[user2][user1]['weight'] += adjacency_list[user2][user1]
+					if self.reverse_graph.has_edge(user2, user1):
+						self.reverse_graph[user2][user1]['weight'] += adjacency_list[user1][user2]
 					else:
-						self.reverse_graph.add_edge(user2, user1, weight=adjacency_list[user2][user1])
-
-		#Add edges to revrse graph
-
+						self.reverse_graph.add_edge(user2, user1, weight=adjacency_list[user1][user2])
 
 	# Decrement weight in links according to beta
 	def __decrement_weight(self, beta):
