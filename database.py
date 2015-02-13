@@ -34,21 +34,31 @@ class Database(object):
 	# time_start inclusive
 	# Value is count of links
 	# Directed
-	# If users is not None, only links between users returned
-	def get_links(self, time_start, time_end, users):
+	# If users is not None, only links that contains user
+	# If exclusive is True; only links between users are returned; else any link that contains a user is returned
+	def get_links(self, time_start, time_end, users, exclusive=False):
 		links = {}
 		if users is not None:
 			users_string = ''
 			for u in users:
 				users_string += '"' +u + '",'
 			users_string = users_string[:-1]
-			for row in self.cursor.execute("SELECT * FROM `mentions` WHERE `time` < ? AND `time` >= ? AND (`from` IN ("+users_string+") OR `to` IN ("+users_string+"))", (time_end, time_start)):
-				if row[0] not in links:
-					links[row[0]] = {}
-				if row[1] in links[row[0]]:
-					links[row[0]][row[1]] = links[row[0]][row[1]] + 1
-				else:
-					links[row[0]][row[1]] = 1
+			if exclusive:
+				for row in self.cursor.execute("SELECT * FROM `mentions` WHERE `time` < ? AND `time` >= ? AND (`from` IN ("+users_string+") AND `to` IN ("+users_string+"))", (time_end, time_start)):
+					if row[0] not in links:
+						links[row[0]] = {}
+					if row[1] in links[row[0]]:
+						links[row[0]][row[1]] = links[row[0]][row[1]] + 1
+					else:
+						links[row[0]][row[1]] = 1
+			else:
+				for row in self.cursor.execute("SELECT * FROM `mentions` WHERE `time` < ? AND `time` >= ? AND (`from` IN ("+users_string+") OR `to` IN ("+users_string+"))", (time_end, time_start)):
+					if row[0] not in links:
+						links[row[0]] = {}
+					if row[1] in links[row[0]]:
+						links[row[0]][row[1]] = links[row[0]][row[1]] + 1
+					else:
+						links[row[0]][row[1]] = 1
 		else:
 			for row in self.cursor.execute("SELECT * FROM `mentions` WHERE `time` < ? AND `time` >= ?", (time_end, time_start)):
 				if row[0] not in links:

@@ -14,7 +14,13 @@ class DynamicFeatures():
 		self._cache = cache.Cache()
 		self._config_data = config.Data()
 	
-	def generate(self):
+	# Calculate features 
+	# Features list is a list of features to calculate
+	# a -> admaic_adar
+	# p -> preferential attachment
+	# j -> jaccard
+	# c -> common neighbors
+	def generate(self, features_list=None):
 		# Generate users
 		users_valid = self._data.get_valid_users()
 		users_sample = self._data.get_sample_users()
@@ -30,7 +36,7 @@ class DynamicFeatures():
 		preferential_attchment = {}
 
 		if not all([self._cache.exist_measure_jaccard(), self._cache.exist_measure_adamicadar(), self._cache.exist_measure_commonneighbor(), self._cache.exist_measure_preferentialattachment()]):
-			# If diasances are not in cache calculate
+			# If distances are not in cache calculate
 			sn = graph.SocialNetwork(self._config.density_cutoff, users_sample)
 			sn.initialize_nodes(users_valid)
 
@@ -39,7 +45,7 @@ class DynamicFeatures():
 					print(str(i) + ' Calculating features between '+str(time_start+(i-1)*self._config_data.delta_t)+' and '+str(time_start+i*self._config_data.delta_t))
 
 				# Get edges
-				edges = db.get_links(time_start+(i-1)*self._config_data.delta_t, time_start+i*self._config_data.delta_t, users_sample)
+				edges = db.get_links(time_start+(i-1)*self._config_data.delta_t, time_start+i*self._config_data.delta_t, users_valid, True)
 				if self._run.verbose:
 					print(str(len(edges)) + ' edges found')
 
@@ -52,7 +58,14 @@ class DynamicFeatures():
 				# Get the measure values only if they dont exist in file
 				if self._run.verbose:
 					print('Generating features')
-				jac, ada, cne, pref = m.combined(not self._cache.exist_measure_jaccard(), not self._cache.exist_measure_adamicadar(), not self._cache.exist_measure_commonneighbor(), not self._cache.exist_measure_preferentialattachment())
+				
+				is_jaccard = (not self._cache.exist_measure_jaccard()) and (features_list is None or 'j' in features_list)
+				is_adamic = (not self._cache.exist_measure_adamicadar()) and (features_list is None or 'a' in features_list)
+				is_cnome = (not self._cache.exist_measure_commonneighbor()) and (features_list is None or 'c' in features_list)
+				is_prefa = (not self._cache.exist_measure_preferentialattachment()) and (features_list is None or 'p' in features_list)
+
+				jac, ada, cne, pref = m.combined( is_jaccard , is_adamic, is_cnome, is_prefa)
+				
 				if self._run.verbose:
 					print('Features generated')
 
@@ -85,38 +98,38 @@ class DynamicFeatures():
 
 			# If cache exist, read from that
 			# Otherwise save the data
-			if self._cache.exist_measure_adamicadar():
+			if self._cache.exist_measure_adamicadar() and 'a' in features_list:
 				if self._run.verbose:
 					print('Reading Adamic Adar from cache')
 				adamic_adar = self._cache.read_measure_adamicadar()
-			else:
+			elif len(adamic_adar) > 0:
 				if self._run.verbose:
 					print('Saving Adamic Adr to cache')
 				self._cache.save_measure_adamicadar(adamic_adar)
 
-			if self._cache.exist_measure_jaccard():
+			if self._cache.exist_measure_jaccard() and 'j' in features_list:
 				if self._run.verbose:
 					print('Reading Jaccard from cache')
 				jaccard = self._cache.read_measure_jaccard()
-			else:
+			elif len(jaccard) > 0:
 				if self._run.verbose:
 					print('Saving Jaccard to cache')
 				self._cache.save_measure_jaccard(jaccard)
 
-			if self._cache.exist_measure_commonneighbor():
+			if self._cache.exist_measure_commonneighbor() and 'c' in features_list:
 				if self._run.verbose:
 					print('Reading Common neighbors from cache')
 				common_neighbor = self._cache.read_measure_commonneighbor()
-			else:
+			elif len(common_neighbor) > 0:
 				if self._run.verbose:
 					print('Saving cache to cache')
 				self._cache.save_measure_commonneighbor(common_neighbor)
 
-			if self._cache.exist_measure_preferentialattachment():
+			if self._cache.exist_measure_preferentialattachment() and 'p' in features_list:
 				if self._run.verbose:
 					print('Reading Preferential attachment from cache')
 				preferential_attchment = self._cache.read_measure_preferentialattachment()
-			else:
+			elif len(preferential_attchment) > 0:
 				if self._run.verbose:
 					print('Saving preferential attachment to cache')
 				self._cache.save_measure_preferentialattachment(preferential_attchment)
@@ -126,17 +139,24 @@ class DynamicFeatures():
 				print('Cache found reading from cache')
 			#All the measures exist in CSV files
 			# So read from file instead of recalculating again
-			if self._run.verbose:
-				print('Reading Jaccard from cache')
-			jaccard = self._cache.read_measure_jaccard()
-			if self._run.verbose:
-				print('Reading Adamic Adar from cache')
-			adamic_adar = self._cache.read_measure_adamicadar()
-			if self._run.verbose:
-				print('Reading Common neighbors from cache')
-			common_neighbor = self._cache.read_measure_commonneighbor()
-			if self._run.verbose:
-				print('Reading preserential attachment from cache')
-			preferential_attchment = self._cache.read_measure_preferentialattchment()
+			if 'j' in features_list:
+				if self._run.verbose:
+					print('Reading Jaccard from cache')
+				jaccard = self._cache.read_measure_jaccard()
+
+			if 'a' in features_list:
+				if self._run.verbose:
+					print('Reading Adamic Adar from cache')
+				adamic_adar = self._cache.read_measure_adamicadar()
+
+			if 'c' in features_list:
+				if self._run.verbose:
+					print('Reading Common neighbors from cache')
+				common_neighbor = self._cache.read_measure_commonneighbor()
+
+			if 'p' in features_list:
+				if self._run.verbose:
+					print('Reading preserential attachment from cache')
+				preferential_attchment = self._cache.read_measure_preferentialattchment()
 
 		db.close()

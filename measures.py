@@ -42,7 +42,7 @@ class Measures():
 
 					if adamic_adar_index:
 						value_adam = self.__nodes_adamic_adar(node_1, node_2, set_intersection)
-						adamic.append((node_1, node_2, value_jacc))
+						adamic.append((node_1, node_2, value_adam))
 
 					if common_neighbor:
 						value_comm = self.__nodes_common_neighbor(node_1, node_2, set_intersection)

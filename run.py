@@ -17,13 +17,13 @@ class RuntimeConfig():
 
 	# Start config with -
 	# v -> verbose mode on
-	def set(self, str):
-		if str[0] != '-':
+	def set(self, vars):
+		if vars[0] != '-':
 			print('RuntimeConfig not set')
 			return False
-		str = str[1:]
+		vars = vars[1:]
 
-		for f in str:
+		for f in vars:
 			self._functions[f]()
 		return self._config
 
@@ -77,7 +77,7 @@ class Run():
 
 	def _dynamic_features(self, argv):
 		fea = dynamic_features.DynamicFeatures(self._config_run)
-		fea.generate()
+		fea.generate(argv)
 
 # Command format:
 # python run.py -<run options> <task_name> <task_arg>

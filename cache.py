@@ -72,17 +72,11 @@ class Cache():
 		if not self._config.is_enabled:
 			return False
 
-		# Flatten the data into a list of lists
-		# First two items in a list represents names of nodes
-		data_flat = []
-		for m in data:
-			data_flat.append([m[0], m[1]] + data[m])
-
 		# Save the data in a file
 		with open(self.file_name_measure_jaccard, 'wb') as csvfile:
 			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-			for row in data_flat:
-				datawriter.writerow(row)
+			for row in data:
+				datawriter.writerow([row[0], row[1]] + data[row])
 
 	# Read jaccard data from CSV file
 	# Retuns a dict with nodes tuple as key and measures as values
@@ -104,17 +98,11 @@ class Cache():
 		if not self._config.is_enabled:
 			return False
 
-		# Flatten the data into a list of lists
-		# First two items in a list represents names of nodes
-		data_flat = []
-		for m in data:
-			data_flat.append([m[0], m[1]] + data[m])
-
 		# Save the data in a file
 		with open(self.file_name_measure_adamicadar, 'wb') as csvfile:
 			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-			for row in data_flat:
-				datawriter.writerow(row)
+			for row in data:
+				datawriter.writerow([row[0], row[1]] + data[row])
 
 	# Read adamic adar data from CSV file
 	# Retuns a dict with nodes tuple as key and measures as values
@@ -136,17 +124,11 @@ class Cache():
 		if not self._config.is_enabled:
 			return False
 
-		# Flatten the data into a list of lists
-		# First two items in a list represents names of nodes
-		data_flat = []
-		for m in data:
-			data_flat.append([m[0], m[1]] + data[m])
-
 		# Save the data in a file
 		with open(self.file_name_measure_commonneighbor, 'wb') as csvfile:
 			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-			for row in data_flat:
-				datawriter.writerow(row)
+			for row in data:
+				datawriter.writerow([row[0], row[1]] + data[row])
 
 	# Read common neighbor data from CSV file
 	# Retuns a dict with nodes tuple as key and measures as values
@@ -168,17 +150,11 @@ class Cache():
 		if not self._config.is_enabled:
 			return False
 
-		# Flatten the data into a list of lists
-		# First two items in a list represents names of nodes
-		data_flat = []
-		for m in data:
-			data_flat.append([m[0], m[1]] + data[m])
-
 		# Save the data in a file
 		with open(self.file_name_measure_preferentialattachment, 'wb') as csvfile:
 			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-			for row in data_flat:
-				datawriter.writerow(row)
+			for row in data:
+				datawriter.writerow([row[0], row[1]] + data[row])
 
 	# Read preferentialattachment data from CSV file
 	# Retuns a dict with nodes tuple as key and measures as values
