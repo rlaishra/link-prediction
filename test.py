@@ -40,7 +40,6 @@ def pagerank():
 					if pr[nod] > pagerank[0][nod]:
 						pprint((nod, pr[nod], pagerank[0][nod]))
 
-
 			pagerank.append(pr)
 
 			#for v in pr:

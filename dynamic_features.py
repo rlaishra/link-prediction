@@ -20,9 +20,10 @@ class DynamicFeatures():
 	# p -> preferential attachment
 	# j -> jaccard
 	# c -> common neighbors
+	# r -> page rank
 	def generate(self, features_list=None):
 		# if feature_list is not None, check to make sure that the vars are valid
-		allowed_measures = ['a', 'j', 'c', 'p']
+		allowed_measures = ['a', 'j', 'c', 'p', 'r']
 		if not all([x in allowed_measures for x in features_list]):
 			print('Invalid measure')
 			return False
@@ -40,8 +41,9 @@ class DynamicFeatures():
 		jaccard = {}
 		common_neighbor = {}
 		preferential_attchment = {}
+		page_rank = {}
 
-		if not all([self._cache.exist_measure_jaccard(), self._cache.exist_measure_adamicadar(), self._cache.exist_measure_commonneighbor(), self._cache.exist_measure_preferentialattachment()]):
+		if not all([self._cache.exist_measure_jaccard(), self._cache.exist_measure_adamicadar(), self._cache.exist_measure_commonneighbor(), self._cache.exist_measure_preferentialattachment(), self._cache.exist_measure_pagerank()]):
 			# If distances are not in cache calculate
 			weighted = False
 			sn = graph.SocialNetwork(self._config.density_cutoff, users_sample, weighted)
@@ -51,6 +53,7 @@ class DynamicFeatures():
 			is_adamic = (not self._cache.exist_measure_adamicadar()) and (features_list is None or 'a' in features_list)
 			is_cnome = (not self._cache.exist_measure_commonneighbor()) and (features_list is None or 'c' in features_list)
 			is_prefa = (not self._cache.exist_measure_preferentialattachment()) and (features_list is None or 'p' in features_list)
+			is_pagerank = (not self._cache.exist_measure_pagerank()) and (features_list is None or 'r' in features_list)
 
 			while time_start + i*self._config_data.delta_t < time_end:
 				if self._run.verbose:
@@ -72,6 +75,9 @@ class DynamicFeatures():
 					print('Generating features')
 
 				jac, ada, cne, pref = m.combined( is_jaccard , is_adamic, is_cnome, is_prefa)
+
+				if is_pagerank:
+					pagra = m.pagerank()
 				
 				if self._run.verbose:
 					print('Features generated')
@@ -101,9 +107,15 @@ class DynamicFeatures():
 					else:
 						preferential_attchment[(d[0],d[1])].append(d[2])
 
+				for d in pagra:
+					if (d[0], d[1]) not in page_rank:
+						page_rank[(d[0],d[1])] = [d[2]]
+					else:
+						page_rank[(d[0],d[1])].append(d[2])
+
 				i += 1
 
-				if i >= 48:
+				if i >= 5:
 					break
 
 			# If cache exist, read from that
@@ -144,6 +156,15 @@ class DynamicFeatures():
 					print('Saving preferential attachment to cache')
 				self._cache.save_measure_preferentialattachment(preferential_attchment)
 
+			if self._cache.exist_measure_pagerank() and 'r' in features_list:
+				if self._run.verbose:
+					print('Reading page rank from cache')
+				page_rank = self._cache.read_measure_pagerank()
+			elif len(preferential_attchment) > 0:
+				if self._run.verbose:
+					print('Saving page rank to cache')
+				self._cache.save_measure_pagerank(page_rank)
+
 		db.close()
 
 
@@ -177,3 +198,9 @@ class DynamicFeatures():
 				print('Reading preserential attachment from cache')
 			preferential_attchment = self._cache.read_measure_preferentialattchment()
 			return preferential_attchment
+
+		if feature is 'r':
+			if self._run.verbose:
+				print('Reading page rank from cache')
+			page_rank = self._cache.read_measure_page_rank()
+			return page_rank

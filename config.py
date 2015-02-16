@@ -102,6 +102,7 @@ class Cache():
 		self._measure_jaccard = 'measure_jaccard.csv'
 		self._measure_adamicadar = 'measure_adamicadar.csv'
 		self._measure_commonneighbor = 'measure_commonneighbor.csv'
+		self._measure_pagerank = 'measure_pagerank.csv'
 		self._measure_preferentialattachment = 'measure_preferentialattachment.csv'
 		self._preprocess_distance_matrix = 'preporcess_distance_matrix.csv'
 
@@ -132,6 +133,10 @@ class Cache():
 	@property 
 	def measure_common_neighbor(self):
 		return self._cache_dir + '/' + self._measure_commonneighbor
+
+	@property 
+	def measure_pagerank(self):
+		return self._cache_dir + '/' + self._measure_pagerank
 
 	@property 
 	def preprocess_distance_matrix(self):

@@ -295,5 +295,29 @@ class Measures():
 		return in_degree
 
 
+	# Calculate the personalized page rank
+	# Returns a list
+	def pagerank(self):
+		# Sample nodes is necessary for calculation
+		if self._sample_nodes is None:
+			print('Sample nodes needs to be provided')
+			return False
+		if self._graph is None:
+			print('Graph not provided')
+			return False
 
+		personal = {}
+		for node in self._graph.nodes():
+			personal[node] = 0
+		for node in self._sample_nodes:
+			personal[node] = 0.1
 
+		data = []
+		for node in self._sample_nodes:
+			personal[node] = 0.9
+			pr = nx.pagerank(self._graph, alpha=0.85, personalization=personal)
+			personal[node] = 0.1
+			t_data = [(node, d, pr[d]) for d in self._sample_nodes if d != node ]
+			data += t_data
+			print(len(data))
+		return data

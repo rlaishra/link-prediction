@@ -15,6 +15,7 @@ class Cache():
 		self.file_name_measure_commonneighbor = self._config.measure_common_neighbor
 		self.file_name_measure_preferentialattachment = self._config.measure_preferential_attachment
 		self.file_name_preprocess_distance_matrix = self._config.preprocess_distance_matrix
+		self.file_name_measure_pagerank = self._config.measure_pagerank
 
 	# Check if the valid users CSV file exist
 	def exist_valid_users(self):
@@ -161,6 +162,32 @@ class Cache():
 	def read_measure_preferentialattachment(self):
 		data = {}
 		with open(self.file_name_measure_preferentialattachment, 'rb') as csvfile:
+			datareader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+			for row in datareader:
+				data[(row[0], row[1])] = [float(x) for x in row[2:]]
+		return data
+
+	# Check if page rank CSV file exist
+	def exist_measure_pagerank(self):
+		return os.path.exists(self.file_name_measure_pagerank) and self._config.is_enabled
+
+	# Save the page rank data
+	# format of data (node1, node1): [m1, m2, m3, ...]
+	def save_measure_pagerank(self, data):
+		if not self._config.is_enabled:
+			return False
+
+		# Save the data in a file
+		with open(self.file_name_measure_pagerank, 'wb') as csvfile:
+			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+			for row in data:
+				datawriter.writerow([row[0], row[1]] + data[row])
+
+	# Read common neighbor data from CSV file
+	# Retuns a dict with nodes tuple as key and measures as values
+	def read_measure_pagerank(self):
+		data = {}
+		with open(self.file_name_measure_pagerank, 'rb') as csvfile:
 			datareader = csv.reader(csvfile, delimiter=' ', quotechar='|')
 			for row in datareader:
 				data[(row[0], row[1])] = [float(x) for x in row[2:]]
