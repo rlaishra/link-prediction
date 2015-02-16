@@ -43,7 +43,8 @@ class DynamicFeatures():
 
 		if not all([self._cache.exist_measure_jaccard(), self._cache.exist_measure_adamicadar(), self._cache.exist_measure_commonneighbor(), self._cache.exist_measure_preferentialattachment()]):
 			# If distances are not in cache calculate
-			sn = graph.SocialNetwork(self._config.density_cutoff, users_sample)
+			weighted = False
+			sn = graph.SocialNetwork(self._config.density_cutoff, users_sample, weighted)
 			sn.initialize_nodes(users_valid)
 
 			is_jaccard = (not self._cache.exist_measure_jaccard()) and (features_list is None or 'j' in features_list)
@@ -101,6 +102,9 @@ class DynamicFeatures():
 						preferential_attchment[(d[0],d[1])].append(d[2])
 
 				i += 1
+
+				if i >= 48:
+					break
 
 			# If cache exist, read from that
 			# Otherwise save the data

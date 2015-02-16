@@ -61,7 +61,7 @@ class Graph():
 		
 		# The link decay factor
 		# Between 0 and 1
-		self._decay_factor = 0.9
+		self._decay_factor = 1
 
 		# The minimum density below which node is considered an outlier
 		self._density_cutoff = 0.1
