@@ -13,7 +13,7 @@ class DynamicFeatures():
 		self._db = database.Database()
 		self._cache = cache.Cache()
 		self._config_data = config.Data()
-	
+		
 	# Calculate features 
 	# Features list is a list of features to calculate
 	# a -> admaic_adar
@@ -44,6 +44,7 @@ class DynamicFeatures():
 		page_rank = {}
 
 		if not all([self._cache.exist_measure_jaccard(), self._cache.exist_measure_adamicadar(), self._cache.exist_measure_commonneighbor(), self._cache.exist_measure_preferentialattachment(), self._cache.exist_measure_pagerank()]):
+			
 			# If distances are not in cache calculate
 			weighted = False
 			sn = graph.SocialNetwork(self._config.density_cutoff, users_sample, weighted)
@@ -88,13 +89,13 @@ class DynamicFeatures():
 						adamic_adar[(d[0],d[1])] = [d[2]]
 					else:
 						adamic_adar[(d[0],d[1])].append(d[2])
-				
+					
 				for d in jac:
 					if (d[0], d[1]) not in jaccard:
 						jaccard[(d[0],d[1])] = [d[2]]
 					else:
 						jaccard[(d[0],d[1])].append(d[2])
-				
+					
 				for d in cne:
 					if (d[0], d[1]) not in common_neighbor:
 						common_neighbor[(d[0],d[1])] = [d[2]]
@@ -114,9 +115,6 @@ class DynamicFeatures():
 						page_rank[(d[0],d[1])].append(d[2])
 
 				i += 1
-
-				if i >= 5:
-					break
 
 			# If cache exist, read from that
 			# Otherwise save the data

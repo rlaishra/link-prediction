@@ -321,3 +321,13 @@ class Measures():
 			data += t_data
 			print(len(data))
 		return data
+
+class MeasuresIncremental(object):
+	def __init__(self):
+		super(MeasuresIncremental, self).__init__()
+	
+	# Update the common neighbors
+	# edge is a tuple (u,v)
+	def common_neighbors(self, edge):
+		
+		
