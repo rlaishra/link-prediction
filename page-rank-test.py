@@ -14,8 +14,10 @@ class PageRankTest(object):
 
 		self._db.open()
 		time_start, time_end = self._db.get_time_min_max()
+		pprint('Time Start: '+ str(time_start))
+		pprint('Time End: '+ str(time_end))
 
-		self._nodes_sample = self._data.get_sample_users()
+		self._nodes_sample = self._data.get_sample_users()[:1000]
 		self._nodes = self._data.get_valid_users()
 		self._edges = self._db.get_links(time_start, time_end, self._nodes, True)
 
@@ -47,14 +49,15 @@ class PageRankTest(object):
 			# Do random walk (1000 runs)
 			current_node = root
 			current_path_nodes = [current_node]
-			for _ in xrange(0,5000):
+			for _ in xrange(0,2000):
 				if current_node not in all_nodes:
 					all_nodes.append(current_node)
+
 				if random.random() > self._alpha:
 					neighbors = self._sn.get_graph()[current_node].keys()
 					if len(neighbors) > 0 :
 						# Select a neighbor at random to walk to
-						weight_sum = sum([self._sn.get_graph()[current_node][x]['weight'] for x in neighbors])
+						weight_sum = sum([self._sn.get_graph()[current_node][x]['weight'] for x in neighbors ])
 						weighted_list = {}
 						last_sum = 0
 						for n in neighbors:
@@ -64,11 +67,11 @@ class PageRankTest(object):
 						
 						rand = random.random()
 						next_node = None	# Initilize with a node
+
 						for n in neighbors:
 							if n not in current_path_nodes and weighted_list[n]['min'] <= rand and weighted_list[n]['max'] > rand:
 								next_node = n
 								current_path_nodes.append(next_node)
-								#pprint(next_node)
 								break
 
 						# Reset to root if no next node is found
@@ -80,11 +83,20 @@ class PageRankTest(object):
 						if current_node not in w_matrix:
 							w_matrix[current_node] = {}
 						if next_node not in w_matrix[current_node]:
-							w_matrix[current_node][next_node] = 1
-						else:
-							w_matrix[current_node][next_node] += 1
+							w_matrix[current_node][next_node] = 0
+						w_matrix[current_node][next_node] += 1
+						
 						current_node = next_node
 					else:
+						# Node has no neighbor
+						# Reset
+						# Update the walk matrix
+						if current_node not in w_matrix:
+							w_matrix[current_node] = {}
+						if root not in w_matrix[current_node]:
+							w_matrix[current_node][root] = 0
+						w_matrix[current_node][root] += 1
+
 						current_node = root
 						current_path_nodes = [root]
 				else:
@@ -92,8 +104,9 @@ class PageRankTest(object):
 						w_matrix[current_node] = {}
 					if root not in w_matrix[current_node]:
 						w_matrix[current_node][root] = 0
-					current_path_nodes = [root]
 					w_matrix[current_node][root] += 1
+
+					current_path_nodes = [root]
 					current_node = root
 			all_nodes = sorted(all_nodes)
 			
@@ -109,6 +122,7 @@ class PageRankTest(object):
 							row.append(w_matrix[n1][n2])
 						else:
 							row.append(0)
+					# Make values stochastic
 					s = sum(row)
 					if s > 0 :
 						row = [x/s for x in row]
@@ -216,23 +230,17 @@ class PageRankTest(object):
 if __name__ == '__main__':
 	test = PageRankTest()
 	o_pr, o_time = test.page_rank_unmodified()
-	pprint(o_time)
+	pprint('Original Execution time: ' + str(o_time))
 	m_pr, m_time = test.page_rank_modified()
-	pprint(m_time)
+	pprint('Modified Execution time: ' + str(m_time))
 	
 	error = 0
 	total = 0
-
-	#pprint(len(o_pr))
-	#pprint(len(m_pr))
-	#pprint(m_pr)
 
 	for n1 in m_pr:
 		if n1 in o_pr:
 			for n2 in m_pr[n1]:
 				if n2 in o_pr[n1] and o_pr[n1][n2] > 0:
-					error += math.fabs(o_pr[n1][n2] - m_pr[n1][n2])
-					total += math.fabs(o_pr[n1][n2])
-	pprint(error)
-	pprint(total)
-	pprint(error/total)
+					error += (o_pr[n1][n2] - m_pr[n1][n2])
+					total +=(o_pr[n1][n2])
+	pprint('Percentage error: ' + str(math.fabs(error*100/total)))

@@ -321,17 +321,6 @@ class Measures():
 			#print(len(data))
 		return data
 
-<<<<<<< HEAD
-class MeasuresIncremental(object):
-	def __init__(self):
-		super(MeasuresIncremental, self).__init__()
-	
-	# Update the common neighbors
-	# edge is a tuple (u,v)
-	def common_neighbors(self, edge):
-		
-		
-=======
 class MeasuresIncremental():
 	def __init__(self, sample_nodes=None):
 		db_config = config.Database()
@@ -349,4 +338,3 @@ class MeasuresIncremental():
 	# Close database connection
 	def close(self):
 		self.connection.close()
->>>>>>> 84b33697435e3650904de97a2ffb3a075b5b85c3
