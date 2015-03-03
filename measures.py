@@ -1,7 +1,7 @@
 # Calculates the different measures but for weighted and directed graphs
 from __future__ import division
 import networkx as nx
-import math
+import math, sqlite3
 
 # Calculate the measures in blocks
 class Measures():
@@ -294,7 +294,6 @@ class Measures():
 					in_degree[y] += 1
 		return in_degree
 
-
 	# Calculate the personalized page rank
 	# Returns a list
 	def pagerank(self):
@@ -313,15 +312,16 @@ class Measures():
 			personal[node] = 0.1
 
 		data = []
-		for node in self._sample_nodes:
+		for node in self._sample_nodes[10]:
 			personal[node] = 0.9
 			pr = nx.pagerank(self._graph, alpha=0.85, personalization=personal)
 			personal[node] = 0.1
 			t_data = [(node, d, pr[d]) for d in self._sample_nodes if d != node ]
 			data += t_data
-			print(len(data))
+			#print(len(data))
 		return data
 
+<<<<<<< HEAD
 class MeasuresIncremental(object):
 	def __init__(self):
 		super(MeasuresIncremental, self).__init__()
@@ -331,3 +331,22 @@ class MeasuresIncremental(object):
 	def common_neighbors(self, edge):
 		
 		
+=======
+class MeasuresIncremental():
+	def __init__(self, sample_nodes=None):
+		db_config = config.Database()
+		self.file_name = db_config.m_name
+	
+	# Open a database connection
+	def open(self):
+		self.connection = sqlite3.connect(self.file_name)
+		self.cursor = self.connection.cursor()
+
+	# Commit after making changes to the database
+	def commit(self):
+		self.connection.commit()
+
+	# Close database connection
+	def close(self):
+		self.connection.close()
+>>>>>>> 84b33697435e3650904de97a2ffb3a075b5b85c3

@@ -3,6 +3,7 @@ import random, csv, operator, math
 import database, graph, measures, data, config
 import networkx as nx
 from pprint import pprint
+import matplotlib.pyplot as plt
 
 def pagerank():
 	conf = config.Data()
@@ -60,18 +61,17 @@ def compare_networks():
 	time_start, time_end = db.get_time_min_max()
 
 	# Get edges between sample_users between time 48 and 72
-	edges = db.get_links(time_start+49*conf.delta_t, time_start+72*conf.delta_t, sample_users, True)
-	pprint(len(edges))
-	return False
+	edges = db.get_links(time_start+37*conf.delta_t, time_start+72*conf.delta_t, sample_users, True)
+	
 	# Make edges as a list
 	edges_list = []
 	for n in edges:
 		for m in edges[n]:
 			edges_list.append((n.encode('ascii','ignore'),m.encode('ascii','ignore')))
 	
-	files = {	'1' : 'exp-data/2015-02-16/mes_1.csv',
-				'2' : 'exp-data/2015-02-16/mes_2.csv',
-				'3' : 'exp-data/2015-02-16/mes_3.csv',}
+	files = {	'1' : 'exp-data/2015-02-16/common_neighbor_1.csv',
+				'2' : 'exp-data/2015-02-16/common_neighbor_2.csv',
+				'3' : 'exp-data/2015-02-16/common_neighbor_3.csv',}
 
 	for n in files:
 		if n not in ['1','2','3']:
@@ -115,15 +115,9 @@ def compare_networks():
 			mid = int(math.ceil(len(edges_list)/2))
 
 		median = counter[mid]
-		wrong_predictions = 0
-		for x in rank:
-			if rank[x] in counter:
-				wrong_predictions += 1
-
-		pprint(wrong_predictions)
 
 		# Print the median positions
-		pprint((n, counter[mid], ))
+		pprint((n, counter[mid]))
 
 
 
@@ -134,6 +128,6 @@ def main():
 
 
 if __name__ == '__main__':
-	#compare_networks()
-	pagerank()
+	compare_networks()
+	#pagerank()
 	#main()
