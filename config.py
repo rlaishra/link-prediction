@@ -81,11 +81,16 @@ class Graph():
 # Database config
 class Database():
 	def __init__(self):
-		self._name = 'database.db'
+		self._name = 'database_sample.db'
+		self._m_name = 'measures.db'
 
 	@property 
 	def name(self):
 		return self._name 
+
+	@property 
+	def m_name(self):
+		return self._m_name
 
 # Config for cache file names
 class Cache():

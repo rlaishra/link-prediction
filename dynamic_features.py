@@ -76,6 +76,7 @@ class DynamicFeatures():
 
 				jac, ada, cne, pref = m.combined( is_jaccard , is_adamic, is_cnome, is_prefa)
 
+				pagra = []
 				if is_pagerank:
 					pagra = m.pagerank()
 				
@@ -115,7 +116,7 @@ class DynamicFeatures():
 
 				i += 1
 
-				if i >= 5:
+				if i >= 25:
 					break
 
 			# If cache exist, read from that
