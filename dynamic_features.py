@@ -117,12 +117,9 @@ class DynamicFeatures():
 
 				i += 1
 
-<<<<<<< HEAD
-=======
 				if i >= 25:
 					break
-
->>>>>>> 84b33697435e3650904de97a2ffb3a075b5b85c3
+					
 			# If cache exist, read from that
 			# Otherwise save the data
 			if self._cache.exist_measure_adamicadar() and 'a' in features_list:
