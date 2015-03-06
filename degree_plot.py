@@ -1,6 +1,6 @@
 # Plot the in degree and out degree of the networks
 
-import database, graph, measures, cache, preprocess, config, data
+from libs import database, graph, measures, cache, preprocess, config, data
 import random
 import matplotlib.pyplot as plt
 from pprint import pprint

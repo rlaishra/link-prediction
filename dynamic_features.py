@@ -2,7 +2,7 @@
 # Adamic-Adar, Jaccard, Preferential Attachment, Common Neighbors
 
 import random
-import database, graph, measures, cache, preprocess, config, data
+from libs import database, graph, measures, cache, preprocess, config, data
 from pprint import pprint
 
 class DynamicFeatures():

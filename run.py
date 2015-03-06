@@ -1,7 +1,8 @@
 # The main script
 # invoke everything from this script
 
-import config, data, degree_plot, dynamic_features
+from libs import config, data, dynamic_features
+import degree_plot
 import sys
 
 # Set run time configs
