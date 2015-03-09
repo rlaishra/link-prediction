@@ -874,7 +874,7 @@ class Prediction():
 			edges = self.db.get_links(self.time_start+(i-1)*self.delta_time, self.time_start+i*self.delta_time, self.users_valid, True)
 			self.network.add_edges(edges, 0.9)
 
-	def get_features(self, i_start, i_end, sample=False):
+	def get_features(self, i_start, i_end, sample=False,one_class=False):
 		self.update_network(i_start, i_end)
 		edges = self.db.get_links(self.time_start+i_start*self.delta_time, self.time_start+i_end*self.delta_time, self.users_sample, True)
 		
@@ -911,43 +911,45 @@ class Prediction():
 		for n1 in self.users_sample :
 			for n2 in self.users_sample :
 				if n1 != n2 :
-					if n1 in edges.keys() and n2 in edges[n1].keys():
+					if n1 in edges.keys() and n2 in edges[n1]:
+						if one_class:
+							continue
 						classes.append(1)
 					else:
 						classes.append(0)
 
 					f = []
-					if (n1,n2) in common_neighbors.keys() :
+					if (n1,n2) in common_neighbors :
 						f.append(common_neighbors[(n1,n2)])
 					else:
 						f.append(0)
 
-					if (n1,n2) in adamic_adar.keys() :
+					if (n1,n2) in adamic_adar :
 						f.append(adamic_adar[(n1,n2)])
 					else:
 						f.append(0)
 
-					if (n1,n2) in jaccard_coefficient.keys() :
+					if (n1,n2) in jaccard_coefficient :
 						f.append(common_neighbors[(n1,n2)])
 					else:
 						f.append(0)
 
-					if (n1,n2) in preferentail_attachment.keys() :
+					if (n1,n2) in preferentail_attachment :
 						f.append(common_neighbors[(n1,n2)])
 					else:
 						f.append(0)
 
-					if (n1,n2) in katz_score.keys() :
+					if (n1,n2) in katz_score :
 						f.append(common_neighbors[(n1,n2)])
 					else:
 						f.append(0)
 
-					if (n1,n2) in shortest_path.keys() :
+					if (n1,n2) in shortest_path :
 						f.append(common_neighbors[(n1,n2)])
 					else:
 						f.append(0)
 
-					if (n1,n2) in rooted_page_rank.keys() :
+					if (n1,n2) in rooted_page_rank :
 						f.append(common_neighbors[(n1,n2)])
 					else:
 						f.append(0)
@@ -957,17 +959,21 @@ class Prediction():
 
 	def run(self,):
 		print('Features 1')
-		features1, classes1 = self.get_features(1,24,sample=True)
+		features1, classes1 = self.get_features(1,24,sample=True, one_class=True)
 		print('Features 2')
 		features2, classes2 = self.get_features(24,48,sample=False)
 		print('Features 3')
 		features3, classes3 = self.get_features(48,72,sample=False)
 		
 		print('Fitting model')
-		clf = svm.LinearSVC()
-		clf.fit(features1, classes2)
+		#clf = svm.LinearSVC(class_weight={1:50, 0:1})
+		#clf.fit(features1, classes2)
+
+		clf = svm.OneClassSVM()
+		clf.fit(features1)
 
 		print('Predicting')
+		#prediction = clf.predict(features2)
 		prediction = clf.predict(features2)
 
 		print('Constructing the classification report')
