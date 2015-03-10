@@ -7,6 +7,7 @@ from scipy import linalg
 from pprint import pprint
 from sklearn import svm
 from sklearn.metrics import classification_report
+from sklearn.metrics import f1_score
 
 class MeasuresNoWeight():
 	def __init__(self, network):
@@ -874,7 +875,7 @@ class Prediction():
 			edges = self.db.get_links(self.time_start+(i-1)*self.delta_time, self.time_start+i*self.delta_time, self.users_valid, True)
 			self.network.add_edges(edges, 0.9)
 
-	def get_features(self, i_start, i_end, sample=False,one_class=False):
+	def get_features(self, i_start, i_end, sample=False,one_class=False,last=False):
 		self.update_network(i_start, i_end)
 		edges = self.db.get_links(self.time_start+i_start*self.delta_time, self.time_start+i_end*self.delta_time, self.users_sample, True)
 		
@@ -885,6 +886,21 @@ class Prediction():
 				self.users_sample.append(n1)
 				for n2 in edges[n1].keys():
 					self.users_sample.append(n2)
+
+		features = []
+		classes = []
+
+		if last:
+			for n1 in self.users_sample :
+				for n2 in self.users_sample :
+					if n1 != n2 :
+						if n1 in edges.keys() and n2 in edges[n1]:
+							if one_class:
+								continue
+							classes.append(1)
+						else:
+							classes.append(0)
+			return features, classes
 
 		n_noweight = MeasuresNoWeight(self.network)
 		a_noweight = MeasuresWeightAM(self.network)
@@ -904,10 +920,7 @@ class Prediction():
 		print('Rooted Page Rank')
 		rooted_page_rank = a_noweight.page_rank(self.users_sample)
 
-		features = []
-		classes = []
-
-		print('COnstructing features')
+		print('Constructing features')
 		for n1 in self.users_sample :
 			for n2 in self.users_sample :
 				if n1 != n2 :
@@ -957,28 +970,93 @@ class Prediction():
 					features.append(f)
 		return features, classes
 
-	def run(self,):
+	# Set weight of class 0; between 1 and 0
+	def svm_get_f1(self, weight0, features1, features2, classes1, classes2, report=False):
+		print('Weight 0: ' + str(weight0))
+		
+		print('Fitting model')
+		clf = svm.LinearSVC(class_weight={1:1, 0:weight0})
+		clf.fit(features1, classes1)
+
+		print('Predicting')
+		prediction = clf.predict(features2)
+		
+		if report:
+			print('Constructing the classification report')
+			print(classification_report(classes2, prediction, target_names=['class_0', 'class_1']))
+			return True
+		else:
+			print('Calculating F1 score')
+			return f1_score(classes2, prediction, pos_label=1)
+
+
+	def supervised_learn(self):
 		print('Features 1')
-		features1, classes1 = self.get_features(1,24,sample=True, one_class=True)
+		features1, classes1 = self.get_features(1,24,sample=True, one_class=False)
 		print('Features 2')
 		features2, classes2 = self.get_features(24,48,sample=False)
 		print('Features 3')
-		features3, classes3 = self.get_features(48,72,sample=False)
+		features3, classes3 = self.get_features(48,72,sample=False, last=True)
 		
-		print('Fitting model')
-		#clf = svm.LinearSVC(class_weight={1:50, 0:1})
+		w_min = 0
+		w_max = 1
+		w_opt = 0
+		s_max = 0
+
+		for _ in xrange(0,100):
+			w_mid = (w_max + w_min)/2
+			w_1 = w_min + (w_mid - w_min)/2
+			w_2 = w_mid + (w_max - w_mid)/2
+
+			s1 = self.svm_get_f1(w_1, features1, features2, classes2, classes3)
+			s2 = self.svm_get_f1(w_2, features1, features2, classes2, classes3)
+
+			# If f1 score change is less than 
+			if math.fabs(max(s1, s2) - s_max) < 0.00001 :
+				print('Max found')
+				if s1 > s2 :
+					w_opt = w_1
+					print('Weight class 0: ' + str(w_1))
+					print('F1 score: ' + str(s1))
+				else:
+					w_opt = w_2
+					print('Weight class 0: ' + str(w_2))
+					print('F1 score: ' + str(s2))
+				break
+
+			if s1 > s2 :
+				w_max = w_mid
+				s_max = s1
+				w_opt = w_1
+				print('Weight class 0: ' + str(w_1))
+				print('F1 score: ' + str(s1))
+			else:
+				w_min = w_mid
+				s_max = s2
+				w_opt = w_2
+				print('Weight class 0: ' + str(w_2))
+				print('F1 score: ' + str(s2))
+		
+		print('Iteration over')
+		
+		self.svm_get_f1(w_opt, features1, features2, classes2, classes3, report=True)
+
+		#print('Fitting model')
+		#class_1_weight = 1
+		#clf = svm.LinearSVC(class_weight={1:10000, 0:1})
 		#clf.fit(features1, classes2)
+		#clf = svm.OneClassSVM()
+		#clf.fit(features1)
 
-		clf = svm.OneClassSVM()
-		clf.fit(features1)
-
-		print('Predicting')
+		#print('Predicting')
 		#prediction = clf.predict(features2)
-		prediction = clf.predict(features2)
+		#prediction = clf.predict(features2)
 
-		print('Constructing the classification report')
-		print(classification_report(classes3, prediction, target_names=['class_0', 'class_1']))
+		#print('Constructing the classification report')
+		#print(classification_report(classes3, prediction, target_names=['class_0', 'class_1']))
 
+	def run(self):
+		self.supervised_learn()
 
 if __name__ == '__main__':
 	#compare_measures()
