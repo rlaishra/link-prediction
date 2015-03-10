@@ -1,7 +1,7 @@
 # Compare measures calculated using no weight, arithmetic mean of weight and geometric means
 
 from __future__ import division
-import math, operator, random, numpy, networkx
+import math, operator, random, numpy, networkx, sys
 from libs import database, graph, data
 from scipy import linalg
 from pprint import pprint
@@ -354,7 +354,7 @@ class MeasuresWeightAM():
 						paths_count = 0
 						for shortest in shortest_list:
 							paths_count += 1
-							path_length = len(shortest) - 1
+							path_length = len(shortest)
 							score_temp = 0
 							for x in xrange(1, len(shortest)) :
 								score_temp += graph[shortest[x-1]][shortest[x]]['weight']
@@ -968,6 +968,7 @@ class Prediction():
 						f.append(0)
 
 					features.append(f)
+
 		return features, classes
 
 	# Set weight of class 0; between 1 and 0
@@ -983,11 +984,10 @@ class Prediction():
 		
 		if report:
 			print('Constructing the classification report')
-			print(classification_report(classes2, prediction, target_names=['class_0', 'class_1']))
-			return True
-		else:
-			print('Calculating F1 score')
-			return f1_score(classes2, prediction, pos_label=1)
+			print(classification_report(classes2, prediction))
+		
+		print('Calculating F1 score')
+		return f1_score(classes2, prediction, pos_label=1)
 
 
 	def supervised_learn(self):
@@ -1012,7 +1012,7 @@ class Prediction():
 			s2 = self.svm_get_f1(w_2, features1, features2, classes2, classes3)
 
 			# If f1 score change is less than 
-			if math.fabs(max(s1, s2) - s_max) < 0.00001 :
+			if (math.fabs(max(s1, s2) - s_max) < 0.00001) and (math.fabs(s1 - s2) < 0.00001) :
 				print('Max found')
 				if s1 > s2 :
 					w_opt = w_1
@@ -1026,39 +1026,70 @@ class Prediction():
 
 			if s1 > s2 :
 				w_max = w_mid
-				s_max = s1
+				s_max = max(s_max, s1)
 				w_opt = w_1
 				print('Weight class 0: ' + str(w_1))
 				print('F1 score: ' + str(s1))
 			else:
 				w_min = w_mid
-				s_max = s2
+				s_max = max(s_max, s2)
 				w_opt = w_2
 				print('Weight class 0: ' + str(w_2))
 				print('F1 score: ' + str(s2))
 		
-		print('Iteration over')
-		
 		self.svm_get_f1(w_opt, features1, features2, classes2, classes3, report=True)
 
-		#print('Fitting model')
-		#class_1_weight = 1
-		#clf = svm.LinearSVC(class_weight={1:10000, 0:1})
-		#clf.fit(features1, classes2)
-		#clf = svm.OneClassSVM()
-		#clf.fit(features1)
+	def anomaly_report(self, prediction, classes):
+		TP = 0
+		TN = 0
+		FP = 0
+		FN = 0
 
-		#print('Predicting')
-		#prediction = clf.predict(features2)
-		#prediction = clf.predict(features2)
+		for i in xrange(0, len(prediction)):
+			if (prediction[i] == 1) and (classes[i] == 0):
+				TN += 1
+			elif (prediction[i] == -1) and (classes[i] == 1):
+				TP += 1
+			elif (prediction[i] == 1) and (classes[i] == 1):
+				FN += 1
+			elif (prediction[i] == -1) and (classes[i] == 0):
+				FP += 1
+		accuracy = (TP+TN)/(TP+TN+FP+FN)
+		recall = TP/(TP+FP)
+		precision = TP/(TP+FN)
+		f1 = (2*recall*precision)/(recall+precision)
 
-		#print('Constructing the classification report')
-		#print(classification_report(classes3, prediction, target_names=['class_0', 'class_1']))
+		print('Accuracy: ' + str(accuracy))
+		print('Recall: ' + str(recall))
+		print('Precision: ' + str(precision))
+		print('F1: '+ str(f1))
+		print((TP,TN,FP,FN))
 
-	def run(self):
-		self.supervised_learn()
+	def anomaly_detection(self):
+		print('Features 1')
+		features1, classes1 = self.get_features(1,24,sample=True, one_class=True)
+		print('Features 2')
+		features2, classes2 = self.get_features(24,48,sample=False)
+		print('Features 3')
+		features3, classes3 = self.get_features(48,72,sample=False, last=True)
+		
+		print('Fitting model')
+		clf = svm.OneClassSVM()
+		clf.fit(features1)
+
+		print('Predicting')
+		prediction = clf.predict(features2)
+
+		print('Constructing the classification report')
+		self.anomaly_report(prediction, classes3)
+
+	def run(self, v):
+		if v == 'l':
+			self.supervised_learn()
+		elif v == 'a':
+			self.anomaly_detection()
 
 if __name__ == '__main__':
 	#compare_measures()
 	p = Prediction()
-	p.run()
+	p.run(sys.argv[1])
