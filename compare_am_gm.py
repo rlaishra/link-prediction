@@ -1119,7 +1119,7 @@ class Prediction():
 		print((TP,TN,FP,FN))
 
 	# Cache the training and testing data
-	def cache_save(self, feature1, classes1, feature2, classes2):
+	def cache_save(self, features1, classes1, features2, classes2):
 		directory = 'cache/'
 
 		f1 = 'cache-learning-features.csv'
