@@ -1,13 +1,15 @@
 # Compare measures calculated using no weight, arithmetic mean of weight and geometric means
 
 from __future__ import division
-import math, operator, random, numpy, networkx, sys
+import math, operator, random, numpy, networkx, sys, os.path, csv
 from libs import database, graph, data
 from scipy import linalg
 from pprint import pprint
 from sklearn import svm
 from sklearn.metrics import classification_report
 from sklearn.metrics import f1_score
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
 class MeasuresNoWeight():
 	def __init__(self, network):
@@ -997,6 +999,9 @@ class Prediction():
 		w_opt = 0
 		s_max = 0
 
+		weights = []
+		f1s = []
+
 		for _ in xrange(0,100):
 			w_mid = (w_max + w_min)/2
 			w_1 = w_min + (w_mid - w_min)/2
@@ -1004,6 +1009,14 @@ class Prediction():
 
 			s1 = self.learn_get_f1(w_1, features1, features2, classes2, classes3)
 			s2 = self.learn_get_f1(w_2, features1, features2, classes2, classes3)
+
+			if w_1 not in weights:
+				weights.append(w_1)
+				f1s.append(s1)
+			
+			if w_2 not in weights:
+				weights.append(w_2)
+				f1s.append(s2)
 
 			print('')
 			print('Weight class 0: ' + str(w_1))
@@ -1028,33 +1041,56 @@ class Prediction():
 				w_min = w_mid
 				s_max = max(s_max, s2)
 				w_opt = w_2
-		return w_opt
+		return w_opt, {'weights': weights, 'f1':f1s}
 
 	# Iterate over weights
 	def iterate_weight(self, features1, features2, classes2, classes3):
 		w_min = 0.05
 		w_max = 1
 
+		weights = []
+		f1s = []
+
 		for i in xrange(0,20):
 			s1 = self.learn_get_f1(w_min+i*0.05, features1, features2, classes2, classes3)
 			
+			weights.append(w_min+i*0.05)
+			f1s.append(s1)
+
 			print('')
 			print('Weight class 0: ' + str(w_min + 0.05*i))
 			print('F1 score: ' + str(s1))
 
+		return {'weights': weights, 'f1':f1s}
+
 	def supervised_learn(self):
-		print('Features 1')
-		features1, classes1 = self.get_features(1,72,sample=True, one_class=False)
-		print('Features 2')
-		features2, classes2 = self.get_features(72,144,sample=False)
-		print('Features 3')
-		features3, classes3 = self.get_features(144,216,sample=False, last=True)
+		if self.cache_check():
+			print('Cache found. Reading.')
+			features1, classes2, features2, classes3 = self.cache_read()
+		else:
+			print('Cache not found. COnstructing.')
+			print('Features 1')
+			features1, classes1 = self.get_features(1,72,sample=True, one_class=False)
+			print('Features 2')
+			features2, classes2 = self.get_features(72,144,sample=False)
+			print('Features 3')
+			features3, classes3 = self.get_features(144,216,sample=False, last=True)
+
+			self.cache_save(features1, classes2, features2, classes3)
 		
-		#self.iterate_weight(features1, features2, classes2, classes3)
+		data1 = self.iterate_weight(features1, features2, classes2, classes3)
 		
-		w_opt = self.learn_optimal_weight(features1, features2, classes2, classes3)
+		w_opt, data2 = self.learn_optimal_weight(features1, features2, classes2, classes3)
 		
 		self.learn_get_f1(w_opt, features1, features2, classes2, classes3, report=True)
+
+		# Plot the f1 vs weights
+		plt.plot(data1['weights'], data1['f1'], c='red')
+		plt.plot(data2['weights'], data2['f1'], c='blue')
+		plt.xlabel('Class 0 weights')
+		plt.ylabel('F1 Score')
+		plt.savefig('f1-vs-weight-'+str(int(time.time()))+'.png')
+		plt.clf()
 
 	def anomaly_report(self, prediction, classes):
 		TP = 0
@@ -1081,6 +1117,81 @@ class Prediction():
 		print('Precision: ' + str(precision))
 		print('F1: '+ str(f1))
 		print((TP,TN,FP,FN))
+
+	# Cache the training and testing data
+	def cache_save(self, feature1, classes1, feature2, classes2):
+		directory = 'cache/'
+
+		f1 = 'cache-learning-features.csv'
+		f2 = 'cache-learning-class.csv'
+		c1 = 'cache-test-features.csv'
+		c2 = 'cache-test-class.csv'
+
+		with open(directory+f1, 'wb') as csvfile:
+			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+			for row in features1:
+				datawriter.writerow(row)
+
+		with open(directory+c1, 'wb') as csvfile:
+			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+			for row in classes1:
+				datawriter.writerow(row)
+
+		with open(directory+f2, 'wb') as csvfile:
+			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+			for row in features2:
+				datawriter.writerow(row)
+
+		with open(directory+c2, 'wb') as csvfile:
+			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+			for row in features:
+				datawriter.writerow(row)
+
+	def cache_read(self):
+		directory = 'cache/'
+
+		f1 = 'cache-learning-features.csv'
+		f2 = 'cache-learning-class.csv'
+		c1 = 'cache-test-features.csv'
+		c2 = 'cache-test-class.csv'
+
+		features1 = []
+		features2 = []
+		classes1 = []
+		classes2 = []
+
+		with open(directory+f1, 'rb') as csvfile:
+			datareader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+			for row in datareader:
+				features1.append(row)
+
+		with open(directory+f2, 'rb') as csvfile:
+			datareader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+			for row in datareader:
+				features2.append(row)
+
+		with open(directory+c1, 'rb') as csvfile:
+			datareader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+			for row in datareader:
+				classes1.append(row)
+
+		with open(directory+c2, 'rb') as csvfile:
+			datareader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+			for row in datareader:
+				classes2.append(row)
+
+		return features1, classes1. features2, classes2
+
+	# Check if cache files are present
+	def cache_check(self):
+		directory = 'cache/'
+
+		f1 = 'cache-learning-features.csv'
+		f2 = 'cache-learning-class.csv'
+		c1 = 'cache-test-features.csv'
+		c2 = 'cache-test-class.csv'
+
+		return os.path.exists(directory+f1) and os.path.exists(directory+f2) and os.path.exists(directory+c1) and os.path.exists(directory+c2) 
 
 	def anomaly_detection(self):
 		print('Features 1')
