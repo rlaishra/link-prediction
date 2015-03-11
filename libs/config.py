@@ -81,8 +81,8 @@ class Graph():
 # Database config
 class Database():
 	def __init__(self):
-		self._name = 'db/database_sample.db'
-		#self._name = 'db/database.db'
+		#self._name = 'db/database_sample.db'
+		self._name = 'db/database.db'
 		self._m_name = 'db/measures.db'
 
 	@property 

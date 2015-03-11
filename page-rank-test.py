@@ -7,7 +7,7 @@ import data, database, graph
 
 # Compare the new page rank algorithm with the unmodified version
 
-class PageRankTest():
+class PageRankTest(object):
 	def __init__(self):
 		self._db = database.Database()
 		self._data = data.Data()

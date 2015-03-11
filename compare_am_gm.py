@@ -851,17 +851,18 @@ def compare_measures():
 		pprint(get_recall(pred, edges, R=R, directed=True))
 
 class Prediction():
-	def __init__(self):
+	def __init__(self,N=10000):
 		self.vals = data.Data()
 		self.db = database.Database()
 
 		# Users
 		self.users_valid = self.vals.get_valid_users()
 		random.shuffle(self.users_valid)
-		self.users_sample = self.users_valid[:10000]
+		self.users_sample = self.users_valid[:N]
 
 		self.db.open()
-		self.time_start, self.time_end = self.db.get_time_min_max()
+		#self.time_start, self.time_end = self.db.get_time_min_max()
+		self.time_start = 1422289905
 
 		self.network = graph.SocialNetwork(0.1, self.users_valid)
 		self.network.initialize_nodes(self.users_valid)
@@ -972,7 +973,7 @@ class Prediction():
 		return features, classes
 
 	# Set weight of class 0; between 1 and 0
-	def svm_get_f1(self, weight0, features1, features2, classes1, classes2, report=False):
+	def learn_get_f1(self, weight0, features1, features2, classes1, classes2, report=False):
 		print('Weight 0: ' + str(weight0))
 		
 		print('Fitting model')
@@ -982,22 +983,15 @@ class Prediction():
 		print('Predicting')
 		prediction = clf.predict(features2)
 		
-		if report:
+		if report or True:
 			print('Constructing the classification report')
 			print(classification_report(classes2, prediction))
 		
 		print('Calculating F1 score')
 		return f1_score(classes2, prediction, pos_label=1)
 
-
-	def supervised_learn(self):
-		print('Features 1')
-		features1, classes1 = self.get_features(1,24,sample=True, one_class=False)
-		print('Features 2')
-		features2, classes2 = self.get_features(24,48,sample=False)
-		print('Features 3')
-		features3, classes3 = self.get_features(48,72,sample=False, last=True)
-		
+	# Iterate over weight to find best weight
+	def learn_optimal_weight(self, features1, features2, classes2, classes3):
 		w_min = 0
 		w_max = 1
 		w_opt = 0
@@ -1008,36 +1002,59 @@ class Prediction():
 			w_1 = w_min + (w_mid - w_min)/2
 			w_2 = w_mid + (w_max - w_mid)/2
 
-			s1 = self.svm_get_f1(w_1, features1, features2, classes2, classes3)
-			s2 = self.svm_get_f1(w_2, features1, features2, classes2, classes3)
+			s1 = self.learn_get_f1(w_1, features1, features2, classes2, classes3)
+			s2 = self.learn_get_f1(w_2, features1, features2, classes2, classes3)
+
+			print('')
+			print('Weight class 0: ' + str(w_1))
+			print('F1 score: ' + str(s1))
+			print('Weight class 0: ' + str(w_2))
+			print('F1 score: ' + str(s2))
 
 			# If f1 score change is less than 
 			if (math.fabs(max(s1, s2) - s_max) < 0.00001) and (math.fabs(s1 - s2) < 0.00001) :
 				print('Max found')
 				if s1 > s2 :
 					w_opt = w_1
-					print('Weight class 0: ' + str(w_1))
-					print('F1 score: ' + str(s1))
 				else:
 					w_opt = w_2
-					print('Weight class 0: ' + str(w_2))
-					print('F1 score: ' + str(s2))
 				break
 
 			if s1 > s2 :
 				w_max = w_mid
 				s_max = max(s_max, s1)
 				w_opt = w_1
-				print('Weight class 0: ' + str(w_1))
-				print('F1 score: ' + str(s1))
 			else:
 				w_min = w_mid
 				s_max = max(s_max, s2)
 				w_opt = w_2
-				print('Weight class 0: ' + str(w_2))
-				print('F1 score: ' + str(s2))
+		return w_opt
+
+	# Iterate over weights
+	def iterate_weight(self, features1, features2, classes2, classes3):
+		w_min = 0.05
+		w_max = 1
+
+		for i in xrange(0,20):
+			s1 = self.learn_get_f1(w_min+i*0.05, features1, features2, classes2, classes3)
+			
+			print('')
+			print('Weight class 0: ' + str(w_min + 0.05*i))
+			print('F1 score: ' + str(s1))
+
+	def supervised_learn(self):
+		print('Features 1')
+		features1, classes1 = self.get_features(1,72,sample=True, one_class=False)
+		print('Features 2')
+		features2, classes2 = self.get_features(72,144,sample=False)
+		print('Features 3')
+		features3, classes3 = self.get_features(144,216,sample=False, last=True)
 		
-		self.svm_get_f1(w_opt, features1, features2, classes2, classes3, report=True)
+		#self.iterate_weight(features1, features2, classes2, classes3)
+		
+		w_opt = self.learn_optimal_weight(features1, features2, classes2, classes3)
+		
+		self.learn_get_f1(w_opt, features1, features2, classes2, classes3, report=True)
 
 	def anomaly_report(self, prediction, classes):
 		TP = 0
@@ -1091,5 +1108,5 @@ class Prediction():
 
 if __name__ == '__main__':
 	#compare_measures()
-	p = Prediction()
+	p = Prediction(5000)
 	p.run(sys.argv[1])
