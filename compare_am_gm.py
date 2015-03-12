@@ -1,7 +1,7 @@
 # Compare measures calculated using no weight, arithmetic mean of weight and geometric means
 
 from __future__ import division
-import math, operator, random, numpy, networkx, sys, os.path, csv
+import math, operator, random, numpy, networkx, sys, os.path, csv, time
 from libs import database, graph, data
 from scipy import linalg
 from pprint import pprint
@@ -1027,20 +1027,22 @@ class Prediction():
 			# If f1 score change is less than 
 			if (math.fabs(max(s1, s2) - s_max) < 0.00001) and (math.fabs(s1 - s2) < 0.00001) :
 				print('Max found')
-				if s1 > s2 :
+				if (s1 > s2) and (s1 > s_max) :
 					w_opt = w_1
-				else:
+				elif (s2 > s_max):
 					w_opt = w_2
 				break
 
 			if s1 > s2 :
 				w_max = w_mid
-				s_max = max(s_max, s1)
-				w_opt = w_1
+				if s1 > s_max:
+					w_opt = w_1
+					s_max = s1
 			else:
 				w_min = w_mid
-				s_max = max(s_max, s2)
-				w_opt = w_2
+				if s2 > s_max:
+					w_opt = w_2
+					s_max = s2
 		return w_opt, {'weights': weights, 'f1':f1s}
 
 	# Iterate over weights
@@ -1068,7 +1070,7 @@ class Prediction():
 			print('Cache found. Reading.')
 			features1, classes2, features2, classes3 = self.cache_read()
 		else:
-			print('Cache not found. COnstructing.')
+			print('Cache not found. Constructing.')
 			print('Features 1')
 			features1, classes1 = self.get_features(1,72,sample=True, one_class=False)
 			print('Features 2')
@@ -1122,10 +1124,10 @@ class Prediction():
 	def cache_save(self, features1, classes1, features2, classes2):
 		directory = 'cache/'
 
-		f1 = 'cache-learning-features.csv'
-		f2 = 'cache-learning-class.csv'
-		c1 = 'cache-test-features.csv'
-		c2 = 'cache-test-class.csv'
+		f1 = 'cache-learning-features-1.csv'
+		c1 = 'cache-learning-class-1.csv'
+		f2 = 'cache-test-features-1.csv'
+		c2 = 'cache-test-class-1.csv'
 
 		with open(directory+f1, 'wb') as csvfile:
 			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -1135,7 +1137,7 @@ class Prediction():
 		with open(directory+c1, 'wb') as csvfile:
 			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
 			for row in classes1:
-				datawriter.writerow(row)
+				datawriter.writerow([row])
 
 		with open(directory+f2, 'wb') as csvfile:
 			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -1144,16 +1146,16 @@ class Prediction():
 
 		with open(directory+c2, 'wb') as csvfile:
 			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-			for row in features:
-				datawriter.writerow(row)
+			for row in classes2:
+				datawriter.writerow([row])
 
 	def cache_read(self):
 		directory = 'cache/'
 
-		f1 = 'cache-learning-features.csv'
-		f2 = 'cache-learning-class.csv'
-		c1 = 'cache-test-features.csv'
-		c2 = 'cache-test-class.csv'
+		f1 = 'cache-learning-features-1.csv'
+		c1 = 'cache-learning-class-1.csv'
+		f2 = 'cache-test-features-1.csv'
+		c2 = 'cache-test-class-1.csv'
 
 		features1 = []
 		features2 = []
@@ -1173,23 +1175,23 @@ class Prediction():
 		with open(directory+c1, 'rb') as csvfile:
 			datareader = csv.reader(csvfile, delimiter=' ', quotechar='|')
 			for row in datareader:
-				classes1.append(row)
+				classes1.append(row[0])
 
 		with open(directory+c2, 'rb') as csvfile:
 			datareader = csv.reader(csvfile, delimiter=' ', quotechar='|')
 			for row in datareader:
-				classes2.append(row)
+				classes2.append(row[0])
 
-		return features1, classes1. features2, classes2
+		return features1, classes1, features2, classes2
 
 	# Check if cache files are present
 	def cache_check(self):
 		directory = 'cache/'
 
-		f1 = 'cache-learning-features.csv'
-		f2 = 'cache-learning-class.csv'
-		c1 = 'cache-test-features.csv'
-		c2 = 'cache-test-class.csv'
+		f1 = 'cache-learning-features-1.csv'
+		f2 = 'cache-learning-class-1.csv'
+		c1 = 'cache-test-features-1.csv'
+		c2 = 'cache-test-class-1.csv'
 
 		return os.path.exists(directory+f1) and os.path.exists(directory+f2) and os.path.exists(directory+c1) and os.path.exists(directory+c2) 
 
