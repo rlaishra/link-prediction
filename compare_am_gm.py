@@ -5,7 +5,13 @@ import math, operator, random, numpy, networkx, sys, os.path, csv, time
 from libs import database, graph, data
 from scipy import linalg
 from pprint import pprint
-from sklearn import svm
+from sklearn import svm, grid_search
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import ExtraTreesClassifier
+from sklearn import covariance
 from sklearn.metrics import classification_report
 from sklearn.metrics import f1_score
 import matplotlib.pyplot as plt
@@ -41,6 +47,10 @@ class MeasuresNoWeight():
 				self._common_neighbors[(nodes[j], nodes[i])] = self._common_neighbors[(nodes[i], nodes[j])]
 		return self._common_neighbors
 
+	def cprint(self, v):
+		sys.stdout.write("\r%s" % v)
+		sys.stdout.flush()
+
 	def adamic_adar(self, nodes=None):
 		self._adamic_adar = {}
 
@@ -50,6 +60,7 @@ class MeasuresNoWeight():
 		rgraph = self._network.get_reverse_graph()
 
 		for i in xrange(0, len(nodes)):
+			self.cprint(str(i+1)+'/'+str(len(nodes)))
 			for j in xrange(i, len(nodes)):
 				neighbors_out = list(set.intersection(set(graph[nodes[i]].keys()), set(graph[nodes[j]].keys())))
 				neighbors_in = list(set.intersection(set(rgraph[nodes[i]].keys()), set(rgraph[nodes[j]].keys())))
@@ -67,6 +78,7 @@ class MeasuresNoWeight():
 		rgraph = self._network.get_reverse_graph()
 
 		for i in xrange(0, len(nodes)):
+			self.cprint(str(i+1)+'/'+str(len(nodes)))
 			for j in xrange(i, len(nodes)):
 				self._preferentail_attachment[(nodes[i], nodes[j])] = len(graph[nodes[i]])*len(graph[nodes[j]]) + len(rgraph[nodes[i]])*len(rgraph[nodes[j]])
 				self._preferentail_attachment[(nodes[j], nodes[i])] = self._preferentail_attachment[(nodes[i], nodes[j])]
@@ -81,6 +93,7 @@ class MeasuresNoWeight():
 		rgraph = self._network.get_reverse_graph()
 
 		for i in xrange(0, len(nodes)):
+			self.cprint(str(i+1)+'/'+str(len(nodes)))
 			for j in xrange(i, len(nodes)):
 				neighbors_out_inter = list(set.intersection(set(graph[nodes[i]].keys()), set(graph[nodes[j]].keys())))
 				neighbors_in_inter = list(set.intersection(set(rgraph[nodes[i]].keys()), set(rgraph[nodes[j]].keys())))
@@ -102,6 +115,7 @@ class MeasuresNoWeight():
 		rgraph = self._network.get_reverse_graph()
 
 		for i in xrange(0, len(nodes)):
+			self.cprint(str(i+1)+'/'+str(len(nodes)))
 			for j in xrange(0, len(nodes)):
 				if j != i :
 					score = 0
@@ -113,7 +127,7 @@ class MeasuresNoWeight():
 		return self._shortest_path
 
 	def katz_score(self, nodes=None):
-		beta = 0.05
+		beta = 0.005
 
 		self._katz_score = {}
 
@@ -123,6 +137,7 @@ class MeasuresNoWeight():
 		rgraph = self._network.get_reverse_graph()
 
 		for i in xrange(0, len(nodes)):
+			self.cprint(str(i+1)+'/'+str(len(nodes)))
 			for j in xrange(0, len(nodes)):
 				if j != i :
 					score = 0
@@ -130,6 +145,7 @@ class MeasuresNoWeight():
 					if networkx.has_path(graph, source=nodes[i], target=nodes[j]) :
 						paths = networkx.all_simple_paths(graph, source=nodes[i], target=nodes[j], cutoff=3)
 						for path in paths:
+							print(len(path))
 							path_length = len(path) - 1
 							score += math.pow(beta, path_length)
 					self._katz_score[(nodes[i], nodes[j])] = score
@@ -150,7 +166,9 @@ class MeasuresNoWeight():
 
 		# Start for each node as root
 		pr = {}
-		for root in nodes:
+		for i in xrange(0,len(nodes)):
+			self.cprint(str(i+1)+'/'+str(len(nodes)))
+			root = nodes[i]
 			pr[root] = {}
 			w_matrix = {}
 			all_nodes = []
@@ -247,6 +265,10 @@ class MeasuresWeightAM():
 		self._preferentail_attachment = None
 		self._shortest_path = None
 
+	def cprint(self, v):
+		sys.stdout.write("\r%s" % v)
+		sys.stdout.flush()
+
 	def common_neighbors(self, nodes=None):
 		# If common neighbors has not been calculates, calculate it
 		self._common_neighbors = {}
@@ -257,11 +279,285 @@ class MeasuresWeightAM():
 		rgraph = self._network.get_reverse_graph()
 
 		for i in xrange(0, len(nodes)):
+			self.cprint(str(i+1)+'/'+str(len(nodes)))
 			for j in xrange(i, len(nodes)):
 				neighbors_out = list(set.intersection(set(graph[nodes[i]].keys()), set(graph[nodes[j]].keys())))
 				neighbors_in = list(set.intersection(set(rgraph[nodes[i]].keys()), set(rgraph[nodes[j]].keys())))
 
 				self._common_neighbors[(nodes[i], nodes[j])] = sum([ (graph[nodes[i]][x]['weight'] + graph[nodes[j]][x]['weight'])/2 for x in neighbors_out]) + sum([ (rgraph[nodes[i]][x]['weight'] + rgraph[nodes[j]][x]['weight'])/2 for x in neighbors_in])
+				self._common_neighbors[(nodes[j], nodes[i])] = self._common_neighbors[(nodes[i], nodes[j])]
+		print('')
+		return self._common_neighbors
+
+	def adamic_adar(self, nodes=None):
+		self._adamic_adar = {}
+
+		if nodes is None:
+			nodes = self._network.get_sample_nodes()
+		graph = self._network.get_graph()
+		rgraph = self._network.get_reverse_graph()
+
+		for i in xrange(0, len(nodes)):
+			self.cprint(str(i+1)+'/'+str(len(nodes)))
+			for j in xrange(i, len(nodes)):
+				neighbors_out = list(set.intersection(set(graph[nodes[i]].keys()), set(graph[nodes[j]].keys())))
+				neighbors_in = list(set.intersection(set(rgraph[nodes[i]].keys()), set(rgraph[nodes[j]].keys())))
+
+				#adamic_adar_out = sum([ (graph[nodes[i]][x]['weight'] + graph[nodes[j]][x]['weight'])/(2 * math.log(max(1.01, sum([graph[x][z]['weight'] for z in graph[x] ])))) for x in neighbors_out ])
+				#adamic_adar_in = sum([ (rgraph[nodes[i]][x]['weight'] + rgraph[nodes[j]][x]['weight'])/(2 * math.log(max(1.01, sum([rgraph[x][z]['weight'] for z in rgraph[x] ])))) for x in neighbors_in ])
+
+				adamic_adar_out = sum([ (graph[nodes[i]][x]['weight'] + graph[nodes[j]][x]['weight'])/(2 * math.log(1.001 + sum([graph[x][z]['weight'] for z in graph[x] ]))) for x in neighbors_out ])
+				adamic_adar_in = sum([ (rgraph[nodes[i]][x]['weight'] + rgraph[nodes[j]][x]['weight'])/(2 * math.log(1.001 + sum([rgraph[x][z]['weight'] for z in rgraph[x] ]))) for x in neighbors_in ])
+
+				self._adamic_adar[(nodes[i], nodes[j])] = adamic_adar_in + adamic_adar_out
+				self._adamic_adar[(nodes[j], nodes[i])] = self._adamic_adar[(nodes[i], nodes[j])]
+		print('')
+		return self._adamic_adar
+
+	def preferentail_attachment(self, nodes=None):
+		self._preferentail_attachment = {}
+
+		if nodes is None:
+			nodes = self._network.get_sample_nodes()
+		graph = self._network.get_graph()
+		rgraph = self._network.get_reverse_graph()
+
+		for i in xrange(0, len(nodes)):
+			self.cprint(str(i+1)+'/'+str(len(nodes)))
+			for j in xrange(i, len(nodes)):
+				self._preferentail_attachment[(nodes[i], nodes[j])] = sum([ graph[nodes[i]][x]['weight'] for x in graph[nodes[i]] ])*sum([ graph[nodes[j]][x]['weight'] for x in graph[nodes[j]] ]) + sum([ rgraph[nodes[i]][x]['weight'] for x in rgraph[nodes[i]] ])*sum([ rgraph[nodes[j]][x]['weight'] for x in rgraph[nodes[j]] ])
+				self._preferentail_attachment[(nodes[j], nodes[i])] = self._preferentail_attachment[(nodes[i], nodes[j])]
+		print('')
+		return self._preferentail_attachment
+
+	# Extended jaccard coefficient
+	def jaccard_coefficient(self, nodes=None):
+		self._jaccard_coefficient = {}
+
+		if nodes is None:
+			nodes = self._network.get_sample_nodes()
+		graph = self._network.get_graph()
+		rgraph = self._network.get_reverse_graph()
+
+		for i in xrange(0, len(nodes)):
+			self.cprint(str(i+1)+'/'+str(len(nodes)))
+			for j in xrange(i, len(nodes)):
+				neighbors_out_union = list(set.union(set(graph[nodes[i]].keys()), set(graph[nodes[j]].keys())))
+				neighbors_in_union = list(set.union(set(rgraph[nodes[i]].keys()), set(rgraph[nodes[j]].keys())))
+
+				x_out = [ graph[nodes[i]][x]['weight'] if x in graph[nodes[i]].keys() else 0 for x in neighbors_out_union ]
+				y_out = [ graph[nodes[j]][x]['weight'] if x in graph[nodes[j]].keys() else 0 for x in neighbors_out_union ]
+
+				x_in = [ rgraph[nodes[i]][x]['weight'] if x in rgraph[nodes[i]].keys() else 0 for x in neighbors_in_union ]
+				y_in = [ rgraph[nodes[j]][x]['weight'] if x in rgraph[nodes[j]].keys() else 0 for x in neighbors_in_union ]
+
+				jac_out = 0
+				jac_in = 0
+
+				if len(neighbors_out_union) > 0 :
+					jac_out = numpy.dot(x_out, y_out)/max(1,(math.pow(numpy.linalg.norm(x_out),2) + math.pow(numpy.linalg.norm(x_out),2) - numpy.dot(x_out,y_out)))
+				
+				if len(neighbors_in_union) > 0 :
+					jac_in = numpy.dot(x_in, y_in)/max(1,(math.pow(numpy.linalg.norm(x_in),2) + math.pow(numpy.linalg.norm(y_in),2) - numpy.dot(x_in,y_in)))
+				
+				self._jaccard_coefficient[(nodes[i], nodes[j])] = jac_out + jac_in
+				self._jaccard_coefficient[(nodes[j], nodes[i])] = self._jaccard_coefficient[(nodes[i], nodes[j])]
+		print('')
+		return self._jaccard_coefficient
+
+	def shortest_path(self, nodes=None):
+		self._shortest_path = {}
+
+		if nodes is None:
+			nodes = self._network.get_sample_nodes()
+		graph = self._network.get_graph()
+		rgraph = self._network.get_reverse_graph()
+
+		for i in xrange(0, len(nodes)):
+			for j in xrange(0, len(nodes)):
+				if j != i :
+					self.cprint(str(i*len(nodes)+(j+1))+'/'+str(len(nodes)*len(nodes)))
+					score = 0
+
+					if networkx.has_path(graph, source=nodes[i], target=nodes[j]) :
+						shortest_list = networkx.all_shortest_paths(graph, source=nodes[i], target=nodes[j])
+						path_length = 0
+						paths_count = 0
+						for shortest in shortest_list:
+							paths_count += 1
+							if path_length == 0:
+								path_length = len(shortest)
+							score += sum([ graph[shortest[x-1]][shortest[x]]['weight'] for x in xrange(1, len(shortest)) ])
+						# Since there is atleast one path between the nodes, [0] is safe
+						# inverse sqaure of path length to make pat length more important
+						score = score/(paths_count*path_length*path_length)
+						#pprint((score, paths_count, path_length))
+						#print('Path count: ' + str(paths_count))
+					self._shortest_path[(nodes[i], nodes[j])] = score
+		print('')
+		return self._shortest_path
+
+	def katz_score(self, nodes=None):
+		beta = 0.005
+
+		self._katz_score = {}
+
+		if nodes is None:
+			nodes = self._network.get_sample_nodes()
+		graph = self._network.get_graph()
+		rgraph = self._network.get_reverse_graph()
+
+		for i in xrange(0, len(nodes)):
+			#self.cprint(str(i+1)+'/'+str(len(nodes)))
+			for j in xrange(0, len(nodes)):
+				if j != i :
+					self.cprint(str(i*len(nodes)+(j+1))+'/'+str(len(nodes)*len(nodes)))
+					score = 0
+
+					if networkx.has_path(graph, source=nodes[i], target=nodes[j]) :
+						paths = networkx.all_simple_paths(graph, source=nodes[i], target=nodes[j], cutoff=3)
+						for path in paths:
+							path_length = len(path) - 1
+							score_temp = 0
+							score += math.pow(beta, path_length) * sum([graph[path[x-1]][path[x]]['weight'] for x in xrange(1, len(path))])/path_length
+							#for x in xrange(1, len(path)) :
+							#	score_temp += graph[path[x-1]][path[x]]['weight']
+							#score += math.pow(beta, path_length) * score_temp/path_length
+							score += math.pow(beta, path_length) * score_temp
+					self._katz_score[(nodes[i], nodes[j])] = score
+		print('')
+		return self._katz_score
+
+	def page_rank(self, nodes=None):
+		alpha = 0.7
+		frac = 0.9
+		prob_cutoff = 0.05
+
+		self._page_rank = {}
+
+		if nodes is None:
+			nodes = self._network.get_sample_nodes()
+		graph = self._network.get_graph()
+		rgraph = self._network.get_reverse_graph()
+
+		# Construct the walk matrix
+		walk_matrix = {}
+
+		# Start for each node as root
+		pr = {}
+		
+		lc = int(math.ceil(math.log(1 - frac)/math.log(1 - alpha)))	# The longest path used in modified 
+		pr = {}
+		for i in xrange(0,len(nodes)):
+			self.cprint(str(i+1)+'/'+str(len(nodes)))
+			root = nodes[i]
+			paths = [[[root]]]
+			all_nodes = [root]
+			probabilities = {}
+
+			for _ in xrange(1,lc):
+				p = []
+				for m in paths[-1]:
+					if (tuple(m) in probabilities) and (probabilities[tuple(m)]*(1 - alpha) <= prob_cutoff) :
+						continue
+					o = m[-1]
+					for q in graph[o].keys():
+						if q not in m:
+							p.append(m+[q])
+							if q not in all_nodes:
+								all_nodes.append(q)
+				if len(p) > 0:
+					paths.append(p)
+
+				# Calculate the path probabilities
+				for p2 in p:
+					n1 = p2[-2] # From
+					n2 = p2[-1] # To
+
+					# Probability of the path
+					if p2[:-1] in probabilities.keys():
+						probabilities[tuple(p2)] = probabilities[tuple(p2[:-1])]*(1 - alpha)*graph[n1][n2]['weight']/(sum([graph[n1][x]['weight'] for x in graph[n1]]))
+					else:
+						probabilities[tuple(p2)] = 1
+						for i in xrange(0, len(p2)-1):
+							probabilities[tuple(p2)] = probabilities[tuple(p2)]*(1 - alpha)*graph[p2[i]][p2[i+1]]['weight']/(sum([graph[p2[i]][x]['weight'] for x in graph[p2[i]]]))
+					
+					# The path ends with a teleprotation back to root
+					# That teleportation probability
+					if tuple(p2 + [root]) not in probabilities.keys():
+						probabilities[tuple(p2 + [root])] = probabilities[tuple(p2)]*(1 - alpha)
+					else:
+						probabilities[tuple(p2 + [root])] = probabilities[tuple(p2)]*(1 - alpha)
+			
+			paths = sorted(paths[1:])
+			
+			if len(paths) < 1:
+				continue
+			
+			# Construct the transition matrix
+			t_matrix = {}
+			for n1 in all_nodes:
+				t_matrix[n1] = {}
+				for n2 in all_nodes:
+					t_matrix[n1][n2] = 0
+
+			for p in probabilities.keys():
+				t_matrix[p[-2]][p[-1]] += probabilities[p]
+
+			# Make a stochastic matrix
+			s_matrix = []
+			for n1 in all_nodes:
+				s = sum([t_matrix[n1][x] for x in all_nodes])
+				row = [t_matrix[n1][x]/s for x in all_nodes]
+				s_matrix.append(row)
+			
+			s_matrix = numpy.array(s_matrix)
+			v = linalg.eig(s_matrix, left=True, right=False)
+			
+			dominant = v[0].tolist().index(max(v[0]))
+			r_pr = v[1][:,dominant]/sum(v[1][:,dominant])
+
+			row = {}
+			for i in xrange(0, len(all_nodes)-1):
+				if (all_nodes[i] != root) :
+					row[all_nodes[i]] = r_pr[i]
+
+			for i in xrange(0, len(all_nodes)):
+				if (all_nodes[i] in nodes) and (all_nodes[i] != root):
+					self._page_rank[(root, all_nodes[i])] = r_pr[i]
+
+		print('')
+		return self._page_rank
+
+class MeasuresWeightGM():
+	def __init__(self, network):
+		self._network = network
+
+		self._common_neighbors 	= None
+		self._jaccard_coefficient = None
+		self._adamic_adar = None
+		self._preferentail_attachment = None
+
+	def cprint(self, v):
+		sys.stdout.write("\r%s" % v)
+		sys.stdout.flush()
+
+	def common_neighbors(self, nodes=None):
+		# If common neighbors has not been calculates, calculate it
+		self._common_neighbors = {}
+
+		if nodes is None:
+			nodes = self._network.get_sample_nodes()
+		graph = self._network.get_graph()
+		rgraph = self._network.get_reverse_graph()
+
+		for i in xrange(0, len(nodes)):
+			print(str(i+1)+'/'+str(len(nodes)))
+			for j in xrange(i, len(nodes)):
+				neighbors_out = list(set.intersection(set(graph[nodes[i]].keys()), set(graph[nodes[j]].keys())))
+				neighbors_in = list(set.intersection(set(rgraph[nodes[i]].keys()), set(rgraph[nodes[j]].keys())))
+
+				self._common_neighbors[(nodes[i], nodes[j])] = sum([ math.sqrt(graph[nodes[i]][x]['weight']*graph[nodes[j]][x]['weight']) for x in neighbors_out]) + sum([ math.sqrt(rgraph[nodes[i]][x]['weight']*rgraph[nodes[j]][x]['weight']) for x in neighbors_in])
 				self._common_neighbors[(nodes[j], nodes[i])] = self._common_neighbors[(nodes[i], nodes[j])]
 
 		return self._common_neighbors
@@ -275,22 +571,23 @@ class MeasuresWeightAM():
 		rgraph = self._network.get_reverse_graph()
 
 		for i in xrange(0, len(nodes)):
+			print(str(i+1)+'/'+str(len(nodes)))
 			for j in xrange(i, len(nodes)):
 				neighbors_out = list(set.intersection(set(graph[nodes[i]].keys()), set(graph[nodes[j]].keys())))
 				neighbors_in = list(set.intersection(set(rgraph[nodes[i]].keys()), set(rgraph[nodes[j]].keys())))
 
-				#adamic_adar_out = sum([ (graph[nodes[i]][x]['weight'] + graph[nodes[j]][x]['weight'])/(2 * math.log(max(1.01, sum([graph[x][z]['weight'] for z in graph[x] ])))) for x in neighbors_out ])
-				#adamic_adar_in = sum([ (rgraph[nodes[i]][x]['weight'] + rgraph[nodes[j]][x]['weight'])/(2 * math.log(max(1.01, sum([rgraph[x][z]['weight'] for z in rgraph[x] ])))) for x in neighbors_in ])
+				#adamic_adar_out = sum([ math.sqrt(graph[nodes[i]][x]['weight'] * graph[nodes[j]][x]['weight'])/(math.log(1.001 + sum([graph[x][z]['weight'] for z in graph[x] ]))) for x in neighbors_out ])
+				#adamic_adar_in = sum([ math.sqrt(rgraph[nodes[i]][x]['weight'] * rgraph[nodes[j]][x]['weight'])/(math.log(1.001 + sum([rgraph[x][z]['weight'] for z in rgraph[x] ]))) for x in neighbors_in ])
 
-				adamic_adar_out = sum([ (graph[nodes[i]][x]['weight'] + graph[nodes[j]][x]['weight'])/(2 * math.log(1.001 + sum([graph[x][z]['weight'] for z in graph[x] ]))) for x in neighbors_out ])
-				adamic_adar_in = sum([ (rgraph[nodes[i]][x]['weight'] + rgraph[nodes[j]][x]['weight'])/(2 * math.log(1.001 + sum([rgraph[x][z]['weight'] for z in rgraph[x] ]))) for x in neighbors_in ])
+				adamic_adar_out = sum([ math.sqrt(graph[nodes[i]][x]['weight'] * graph[nodes[j]][x]['weight'])/(geometric_sum([graph[x][z]['weight'] for z in graph[x] ])) for x in neighbors_out ])
+				adamic_adar_in = sum([ math.sqrt(rgraph[nodes[i]][x]['weight'] * rgraph[nodes[j]][x]['weight'])/(geometric_sum([rgraph[x][z]['weight'] for z in rgraph[x] ])) for x in neighbors_in ])
 
 				self._adamic_adar[(nodes[i], nodes[j])] = adamic_adar_in + adamic_adar_out
 				self._adamic_adar[(nodes[j], nodes[i])] = self._adamic_adar[(nodes[i], nodes[j])]
 		return self._adamic_adar
 
-	def preferentail_attachment(self, nodes=None):
-		self._preferentail_attachment = {}
+	def shortest_path(self, nodes=None):
+		self._shortest_path = {}
 
 		if nodes is None:
 			nodes = self._network.get_sample_nodes()
@@ -298,12 +595,61 @@ class MeasuresWeightAM():
 		rgraph = self._network.get_reverse_graph()
 
 		for i in xrange(0, len(nodes)):
-			for j in xrange(i, len(nodes)):
-				self._preferentail_attachment[(nodes[i], nodes[j])] = sum([ graph[nodes[i]][x]['weight'] for x in graph[nodes[i]] ])*sum([ graph[nodes[j]][x]['weight'] for x in graph[nodes[j]] ]) + sum([ rgraph[nodes[i]][x]['weight'] for x in rgraph[nodes[i]] ])*sum([ rgraph[nodes[j]][x]['weight'] for x in rgraph[nodes[j]] ])
-				self._preferentail_attachment[(nodes[j], nodes[i])] = self._preferentail_attachment[(nodes[i], nodes[j])]
-		return self._preferentail_attachment
+			print(str(i+1)+'/'+str(len(nodes)))
+			for j in xrange(0, len(nodes)):
+				if j != i :
+					score = 0
+
+					if networkx.has_path(graph, source=nodes[i], target=nodes[j]) :
+						shortest_list = networkx.all_shortest_paths(graph, source=nodes[i], target=nodes[j])
+						score = 0
+						path_length = 0
+						paths_count = 0
+						for shortest in shortest_list:
+							paths_count += 1
+							path_length = len(shortest) - 1 	# Number of paths is 1 less than number of nodes
+							temp_score = 1
+							for x in xrange(1, len(shortest)) :
+								temp_score = temp_score * graph[shortest[x-1]][shortest[x]]['weight']
+							score += math.pow(temp_score, 1/path_length)
+
+						score = score/(paths_count*path_length)
+						#pprint((score, paths_count, path_length))
+						
+					self._shortest_path[(nodes[i], nodes[j])] = score
+		return self._shortest_path
+
+	def katz_score(self, nodes=None):
+		beta = 0.005
+
+		self._katz_score = {}
+
+		if nodes is None:
+			nodes = self._network.get_sample_nodes()
+		graph = self._network.get_graph()
+		rgraph = self._network.get_reverse_graph()
+
+		for i in xrange(0, len(nodes)):
+			print(str(i+1)+'/'+str(len(nodes)))
+			for j in xrange(0, len(nodes)):
+				if j != i :
+					score = 0
+
+					if networkx.has_path(graph, source=nodes[i], target=nodes[j]) :
+						paths = networkx.all_simple_paths(graph, source=nodes[i], target=nodes[j], cutoff=3)
+						for path in paths:
+							path_length = len(path) - 1
+							score_temp = 1
+							for x in xrange(1, len(path)) :
+								score_temp *= graph[path[x-1]][path[x]]['weight']
+							score += math.pow(beta, path_length) * math.pow(score_temp, 1/path_length)
+					#if score > 0:
+					#	print(nodes[i], nodes[j], score)
+					self._katz_score[(nodes[i], nodes[j])] = score
+		return self._katz_score
 
 	# Extended jaccard coefficient
+	# Same as AM
 	def jaccard_coefficient(self, nodes=None):
 		self._jaccard_coefficient = {}
 
@@ -313,6 +659,7 @@ class MeasuresWeightAM():
 		rgraph = self._network.get_reverse_graph()
 
 		for i in xrange(0, len(nodes)):
+			print(str(i+1)+'/'+str(len(nodes)))
 			for j in xrange(i, len(nodes)):
 				neighbors_out_union = list(set.union(set(graph[nodes[i]].keys()), set(graph[nodes[j]].keys())))
 				neighbors_in_union = list(set.union(set(rgraph[nodes[i]].keys()), set(rgraph[nodes[j]].keys())))
@@ -336,66 +683,7 @@ class MeasuresWeightAM():
 				self._jaccard_coefficient[(nodes[j], nodes[i])] = self._jaccard_coefficient[(nodes[i], nodes[j])]
 		return self._jaccard_coefficient
 
-	def shortest_path(self, nodes=None):
-		self._shortest_path = {}
-
-		if nodes is None:
-			nodes = self._network.get_sample_nodes()
-		graph = self._network.get_graph()
-		rgraph = self._network.get_reverse_graph()
-
-		for i in xrange(0, len(nodes)):
-			for j in xrange(0, len(nodes)):
-				if j != i :
-					score = 0
-
-					if networkx.has_path(graph, source=nodes[i], target=nodes[j]) :
-						shortest_list = networkx.all_shortest_paths(graph, source=nodes[i], target=nodes[j])
-						
-						path_length = 0
-						paths_count = 0
-						for shortest in shortest_list:
-							paths_count += 1
-							path_length = len(shortest)
-							score_temp = 0
-							for x in xrange(1, len(shortest)) :
-								score_temp += graph[shortest[x-1]][shortest[x]]['weight']
-							score += score_temp/path_length
-						# Since there is atleast one path between the nodes, [0] is safe
-						# inverse sqaure of path length to make pat length more important
-						score = score/(paths_count*path_length)
-						#pprint((score, paths_count, path_length))
-						
-					self._shortest_path[(nodes[i], nodes[j])] = score
-		return self._shortest_path
-
-	def katz_score(self, nodes=None):
-		beta = 0.5
-
-		self._katz_score = {}
-
-		if nodes is None:
-			nodes = self._network.get_sample_nodes()
-		graph = self._network.get_graph()
-		rgraph = self._network.get_reverse_graph()
-
-		for i in xrange(0, len(nodes)):
-			for j in xrange(0, len(nodes)):
-				if j != i :
-					score = 0
-
-					if networkx.has_path(graph, source=nodes[i], target=nodes[j]) :
-						paths = networkx.all_simple_paths(graph, source=nodes[i], target=nodes[j], cutoff=3)
-						for path in paths:
-							path_length = len(path) - 1
-							score_temp = 0
-							for x in xrange(1, len(path)) :
-								score_temp += graph[path[x-1]][path[x]]['weight']
-							#score += math.pow(beta, path_length) * score_temp/path_length
-							score += math.pow(beta, path_length) * score_temp
-					self._katz_score[(nodes[i], nodes[j])] = score
-		return self._katz_score
-
+	# Same as AM
 	def page_rank(self, nodes=None):
 		alpha = 0.7
 
@@ -411,7 +699,9 @@ class MeasuresWeightAM():
 
 		# Start for each node as root
 		pr = {}
-		for root in nodes:
+		for i in xrange(0,len(nodes)):
+			print(str(i+1)+'/'+str(len(nodes)))
+			root = nodes[i]
 			pr[root] = {}
 			w_matrix = {}
 			all_nodes = []
@@ -514,117 +804,6 @@ class MeasuresWeightAM():
 					self._page_rank[(root, all_nodes[i])] = numpy.real(r_pr[i])
 
 		return self._page_rank
-
-class MeasuresWeightGM():
-	def __init__(self, network):
-		self._network = network
-
-		self._common_neighbors 	= None
-		self._jaccard_coefficient = None
-		self._adamic_adar = None
-		self._preferentail_attachment = None
-
-	def common_neighbors(self, nodes=None):
-		# If common neighbors has not been calculates, calculate it
-		self._common_neighbors = {}
-
-		if nodes is None:
-			nodes = self._network.get_sample_nodes()
-		graph = self._network.get_graph()
-		rgraph = self._network.get_reverse_graph()
-
-		for i in xrange(0, len(nodes)):
-			for j in xrange(i, len(nodes)):
-				neighbors_out = list(set.intersection(set(graph[nodes[i]].keys()), set(graph[nodes[j]].keys())))
-				neighbors_in = list(set.intersection(set(rgraph[nodes[i]].keys()), set(rgraph[nodes[j]].keys())))
-
-				self._common_neighbors[(nodes[i], nodes[j])] = sum([ math.sqrt(graph[nodes[i]][x]['weight']*graph[nodes[j]][x]['weight']) for x in neighbors_out]) + sum([ math.sqrt(rgraph[nodes[i]][x]['weight']*rgraph[nodes[j]][x]['weight']) for x in neighbors_in])
-				self._common_neighbors[(nodes[j], nodes[i])] = self._common_neighbors[(nodes[i], nodes[j])]
-
-		return self._common_neighbors
-
-	def adamic_adar(self, nodes=None):
-		self._adamic_adar = {}
-
-		if nodes is None:
-			nodes = self._network.get_sample_nodes()
-		graph = self._network.get_graph()
-		rgraph = self._network.get_reverse_graph()
-
-		for i in xrange(0, len(nodes)):
-			for j in xrange(i, len(nodes)):
-				neighbors_out = list(set.intersection(set(graph[nodes[i]].keys()), set(graph[nodes[j]].keys())))
-				neighbors_in = list(set.intersection(set(rgraph[nodes[i]].keys()), set(rgraph[nodes[j]].keys())))
-
-				#adamic_adar_out = sum([ math.sqrt(graph[nodes[i]][x]['weight'] * graph[nodes[j]][x]['weight'])/(math.log(1.001 + sum([graph[x][z]['weight'] for z in graph[x] ]))) for x in neighbors_out ])
-				#adamic_adar_in = sum([ math.sqrt(rgraph[nodes[i]][x]['weight'] * rgraph[nodes[j]][x]['weight'])/(math.log(1.001 + sum([rgraph[x][z]['weight'] for z in rgraph[x] ]))) for x in neighbors_in ])
-
-				adamic_adar_out = sum([ math.sqrt(graph[nodes[i]][x]['weight'] * graph[nodes[j]][x]['weight'])/(geometric_sum([graph[x][z]['weight'] for z in graph[x] ])) for x in neighbors_out ])
-				adamic_adar_in = sum([ math.sqrt(rgraph[nodes[i]][x]['weight'] * rgraph[nodes[j]][x]['weight'])/(geometric_sum([rgraph[x][z]['weight'] for z in rgraph[x] ])) for x in neighbors_in ])
-
-				self._adamic_adar[(nodes[i], nodes[j])] = adamic_adar_in + adamic_adar_out
-				self._adamic_adar[(nodes[j], nodes[i])] = self._adamic_adar[(nodes[i], nodes[j])]
-		return self._adamic_adar
-
-	def shortest_path(self, nodes=None):
-		self._shortest_path = {}
-
-		if nodes is None:
-			nodes = self._network.get_sample_nodes()
-		graph = self._network.get_graph()
-		rgraph = self._network.get_reverse_graph()
-
-		for i in xrange(0, len(nodes)):
-			for j in xrange(0, len(nodes)):
-				if j != i :
-					score = 0
-
-					if networkx.has_path(graph, source=nodes[i], target=nodes[j]) :
-						shortest_list = networkx.all_shortest_paths(graph, source=nodes[i], target=nodes[j])
-						score = 0
-						path_length = 0
-						paths_count = 0
-						for shortest in shortest_list:
-							paths_count += 1
-							path_length = len(shortest) - 1 	# Number of paths is 1 less than number of nodes
-							temp_score = 1
-							for x in xrange(1, len(shortest)) :
-								temp_score = temp_score * graph[shortest[x-1]][shortest[x]]['weight']
-							score += math.pow(temp_score, 1/path_length)
-
-						score = score/(paths_count*path_length)
-						#pprint((score, paths_count, path_length))
-						
-					self._shortest_path[(nodes[i], nodes[j])] = score
-		return self._shortest_path
-
-	def katz_score(self, nodes=None):
-		beta = 0.5
-
-		self._katz_score = {}
-
-		if nodes is None:
-			nodes = self._network.get_sample_nodes()
-		graph = self._network.get_graph()
-		rgraph = self._network.get_reverse_graph()
-
-		for i in xrange(0, len(nodes)):
-			for j in xrange(0, len(nodes)):
-				if j != i :
-					score = 0
-
-					if networkx.has_path(graph, source=nodes[i], target=nodes[j]) :
-						paths = networkx.all_simple_paths(graph, source=nodes[i], target=nodes[j], cutoff=3)
-						for path in paths:
-							path_length = len(path) - 1
-							score_temp = 1
-							for x in xrange(1, len(path)) :
-								score_temp *= graph[path[x-1]][path[x]]['weight']
-							score += math.pow(beta, path_length) * math.pow(score_temp, 1/path_length)
-					#if score > 0:
-					#	print(nodes[i], nodes[j], score)
-					self._katz_score[(nodes[i], nodes[j])] = score
-		return self._katz_score
 
 # Sort the edges by the measure score
 # Score of 0 is not ranked
@@ -853,7 +1032,7 @@ def compare_measures():
 		pprint(get_recall(pred, edges, R=R, directed=True))
 
 class Prediction():
-	def __init__(self,N=10000):
+	def __init__(self,N=10000,t1=1,t2=72,t3=144,t4=216, m_type=None):
 		self.vals = data.Data()
 		self.db = database.Database()
 
@@ -871,59 +1050,100 @@ class Prediction():
 
 		# Get edges and construct the graph for 36 hours
 		self.delta_time = 3600 	# COnstruct at 1 hour interval
-		
+
+		self.t1 = t1
+		self.t2 = t2
+		self.t3 = t3
+		self.t4 = t4
+
+		self.sample_size = N
+
+		self.directory = 'cache/'
+
+		self.f1 = 'cache-learning-features-k4-100-168-'+m_type+'-7.csv'
+		self.c1 = 'cache-learning-class-k4-100-168-'+m_type+'-7.csv'
+		self.f2 = 'cache-test-features-k4-100-168-'+m_type+'-7.csv'
+		self.c2 = 'cache-test-class-k4-100-168-'+m_type+'-7.csv'
+
+		#self.f1 = 'cache-learning-features-test-data.csv'
+		#self.c1 = 'cache-learning-class-test-data.csv'
+		#self.f2 = 'cache-test-features-test-data.csv'
+		#self.c2 = 'cache-test-class-test-data.csv'
+
+		# Type of measure used
+		if m_type in ['no', 'am', 'gm']:
+			self.m_type = m_type
+		else:
+			self.m_type = 'am'
+
+	def cprint(self, v):
+		sys.stdout.write("\r%s" % v)
+		sys.stdout.flush()
+
 	def update_network(self, i_start, i_end):
+		print('Constructing Network: ')
 		for i in xrange(i_start, i_end):
-			print('Time: '+str(i))
+			self.cprint(str(int((i-i_start+1)*100/(i_end - i_start)))+'%'),
 			edges = self.db.get_links(self.time_start+(i-1)*self.delta_time, self.time_start+i*self.delta_time, self.users_valid, True)
 			self.network.add_edges(edges, 0.9)
-
-	def get_features(self, i_start, i_end, sample=False,one_class=False,last=False):
-		self.update_network(i_start, i_end)
-		edges = self.db.get_links(self.time_start+i_start*self.delta_time, self.time_start+i_end*self.delta_time, self.users_sample, True)
+		print('')
+	
+	# Get nodes in k-clique communities of max size
+	# if n is int, return nodes in all communities of size > n
+	def community_clique(self, k=4, n=False):
+		communities = networkx.k_clique_communities(self.network.get_graph().to_undirected(), k)
 		
-		if sample:
-			# Construct edges with links list
-			self.users_sample = []
-			for n1 in edges.keys():
-				self.users_sample.append(n1)
-				for n2 in edges[n1].keys():
-					self.users_sample.append(n2)
+		if not n:
+			max_size = 0
+			nodes = []
+			for c in communities:
+				if len(c) > max_size:
+					nodes = c
+					max_size = len(c)
 
-		features = []
+			nodes = list(nodes)
+			nodes = list(set.intersection(set(nodes), set(self.users_valid)))
+		else:
+			nodes = []
+			for c in communities:
+				if len(c) > n:
+					nodes += list(c)
+
+			nodes = list(set(nodes))
+			nodes = list(set.intersection(set(nodes), set(self.users_valid)))
+
+		random.shuffle(nodes)
+
+		print('Community size: ' + str(len(nodes)))
+
+		self.users_sample = nodes[:self.sample_size]
+
+	def get_sample(self, edges):
+		# Construct edges with links list
+		self.users_sample = []
+		for n1 in edges.keys():
+			self.users_sample.append(n1)
+			for n2 in edges[n1].keys():
+				self.users_sample.append(n2)
+
+	def get_last_class(self, edges, one_class=False):
 		classes = []
 
-		if last:
-			for n1 in self.users_sample :
-				for n2 in self.users_sample :
-					if n1 != n2 :
-						if n1 in edges.keys() and n2 in edges[n1]:
-							if one_class:
-								continue
-							classes.append(1)
-						else:
-							classes.append(0)
-			return features, classes
+		for n1 in self.users_sample :
+			for n2 in self.users_sample :
+				if n1 != n2 :
+					if n1 in edges.keys() and n2 in edges[n1]:
+						if one_class:
+							continue
+						classes.append(1)
+					else:
+						classes.append(0)
+		return classes
 
-		n_noweight = MeasuresNoWeight(self.network)
-		a_noweight = MeasuresWeightAM(self.network)
-		
-		print('Common neighbors')
-		common_neighbors = a_noweight.common_neighbors(self.users_sample)
-		print('Adamic Adar')
-		adamic_adar = a_noweight.adamic_adar(self.users_sample)
-		print('Preferential Attachment')
-		preferentail_attachment = n_noweight.preferentail_attachment(self.users_sample)
-		print('Jaccard Coefficient')
-		jaccard_coefficient = a_noweight.jaccard_coefficient(self.users_sample)
-		print('Shortest Path')
-		shortest_path = n_noweight.shortest_path(self.users_sample)
-		print('Katz Score')
-		katz_score = n_noweight.katz_score(self.users_sample)
-		print('Rooted Page Rank')
-		rooted_page_rank = a_noweight.page_rank(self.users_sample)
 
-		print('Constructing features')
+	def construct_features(self, edges, common_neighbors, adamic_adar, preferentail_attachment, jaccard_coefficient, shortest_path, katz_score, rooted_page_rank, one_class=False):
+		features = []
+		classes = []
 		for n1 in self.users_sample :
 			for n2 in self.users_sample :
 				if n1 != n2 :
@@ -971,15 +1191,74 @@ class Prediction():
 						f.append(0)
 
 					features.append(f)
+		return features, classes
+
+	def get_features(self, i_start, i_end, sample=False,one_class=False,last=False, comm_sample=False):
+		self.update_network(i_start, i_end)
+		edges = self.db.get_links(self.time_start+i_start*self.delta_time, self.time_start+i_end*self.delta_time, self.users_sample, True)
+		
+		if sample:
+			self.get_sample(edges)
+
+		if comm_sample:
+			self.community_clique(4)
+
+		features = []
+		classes = []
+
+		if last:
+			classes = self.get_last_class(edges, one_class=one_class)
+			return features, classes
+
+		if self.m_type == 'no':
+			mes = MeasuresNoWeight(self.network)
+		elif self.m_type == 'am':
+			mes = MeasuresWeightAM(self.network)
+		else:
+			mes = MeasuresWeightGM(self.network)
+
+		print('Common neighbors')
+		common_neighbors = mes.common_neighbors(self.users_sample)
+		print('Adamic Adar')
+		adamic_adar = mes.adamic_adar(self.users_sample)
+		print('Preferential Attachment')
+		preferentail_attachment = mes.preferentail_attachment(self.users_sample)
+		print('Jaccard Coefficient')
+		jaccard_coefficient = mes.jaccard_coefficient(self.users_sample)
+		print('Rooted Page Rank')
+		rooted_page_rank = mes.page_rank(self.users_sample)
+		print('Katz Score')
+		katz_score = mes.katz_score(self.users_sample)
+		print('Shortest Path')
+		shortest_path = mes.shortest_path(self.users_sample)
+		
+		print('Constructing features')
+		features, classes = self.construct_features(edges, common_neighbors, adamic_adar, preferentail_attachment, jaccard_coefficient, shortest_path, katz_score, rooted_page_rank, one_class=one_class)
 
 		return features, classes
 
 	# Set weight of class 0; between 1 and 0
-	def learn_get_f1(self, weight0, features1, features2, classes1, classes2, report=False):
+	def learn_get_f1(self, weight0, features1, features2, classes1, classes2, report=False, algorithm='svm',w1=1,w0=1):
 		print('Weight 0: ' + str(weight0))
 		
 		print('Fitting model')
-		clf = svm.LinearSVC(class_weight={1:1, 0:weight0})
+
+		if algorithm == 'svm_iterate':
+			clf = svm.SVC(class_weight={1:1, 0:weight0},kernel="linear")
+		elif algorithm == 'decison_tree':
+			clf = DecisionTreeClassifier()
+		elif algorithm == 'nbc':
+			clf = GaussianNB()
+		elif algorithm == 'adaboost':
+			clf = AdaBoostClassifier()
+		elif algorithm == 'random_forest':
+			clf = RandomForestClassifier()
+		elif algorithm == 'svm':
+			#parameters = {'kernel':('linear', 'rbf'), 'C':[1, 10]}
+			#svr = svm.SVC()
+			#clf = grid_search.GridSearchCV(svr, parameters)
+			clf = svm.SVC(class_weight={1:w1, 0:w0},kernel="linear")
+
 		clf.fit(features1, classes1)
 
 		print('Predicting')
@@ -1002,7 +1281,7 @@ class Prediction():
 		weights = []
 		f1s = []
 
-		for _ in xrange(0,100):
+		for _ in xrange(0,20):
 			w_mid = (w_max + w_min)/2
 			w_1 = w_min + (w_mid - w_min)/2
 			w_2 = w_mid + (w_max - w_mid)/2
@@ -1065,34 +1344,56 @@ class Prediction():
 
 		return {'weights': weights, 'f1':f1s}
 
-	def supervised_learn(self):
+	def supervised_learn(self, feature1=None, class1=None, feature2=None, class2=None, algorithm='svm' ):
 		if self.cache_check():
 			print('Cache found. Reading.')
 			features1, classes2, features2, classes3 = self.cache_read()
 		else:
 			print('Cache not found. Constructing.')
 			print('Features 1')
-			features1, classes1 = self.get_features(1,72,sample=True, one_class=False)
+			features1, classes1 = self.get_features(self.t1,self.t2,sample=False, one_class=False, comm_sample=True)
 			print('Features 2')
-			features2, classes2 = self.get_features(72,144,sample=False)
+			features2, classes2 = self.get_features(self.t2,self.t3,sample=False)
 			print('Features 3')
-			features3, classes3 = self.get_features(144,216,sample=False, last=True)
+			features3, classes3 = self.get_features(self.t3,self.t4,sample=False, last=True)
 
 			self.cache_save(features1, classes2, features2, classes3)
-		
-		data1 = self.iterate_weight(features1, features2, classes2, classes3)
-		
-		w_opt, data2 = self.learn_optimal_weight(features1, features2, classes2, classes3)
-		
-		self.learn_get_f1(w_opt, features1, features2, classes2, classes3, report=True)
 
-		# Plot the f1 vs weights
-		plt.plot(data1['weights'], data1['f1'], c='red')
-		plt.plot(data2['weights'], data2['f1'], c='blue')
-		plt.xlabel('Class 0 weights')
-		plt.ylabel('F1 Score')
-		plt.savefig('f1-vs-weight-'+str(int(time.time()))+'.png')
-		plt.clf()
+		if feature1 is not None:
+			features1 = feature1
+
+		if feature2 is not None:
+			features2 = feature2
+
+		if class1 is not None:
+			classes2 = class1
+
+		if class2 is not None:
+			classes3 = class2
+		
+		features1, classes2, w_0, w_1 = self.balance_data(features1, classes2, N=5)
+		#features2, classes3, t_0, t_1 = self.balance_data(features2, classes3, N=5)
+		
+		w0 = 1
+		w1 = 1
+
+		#t_f, t_c, w0, w1 = self.balance_data(features1, classes2, N=10)
+
+		w_opt = None
+		if algorithm == 'svm_iterate':
+			data1 = self.iterate_weight(features1, features2, classes2, classes3)
+			w_opt, data2 = self.learn_optimal_weight(features1, features2, classes2, classes3)
+
+			# Plot the f1 vs weights
+			plt.scatter(data1['weights'], data1['f1'], c='red')
+			plt.scatter(data2['weights'], data2['f1'], c='blue')
+			plt.xlabel('Class 0 weights')
+			plt.ylabel('F1 Score')
+			plt.savefig('img/f1-vs-weight-'+str(int(time.time()))+'.png')
+			plt.clf()
+		
+		self.learn_get_f1(w_opt, features1, features2, classes2, classes3, report=True, algorithm=algorithm, w0=w0, w1=w1)
+		
 
 	def anomaly_report(self, prediction, classes):
 		TP = 0
@@ -1100,18 +1401,20 @@ class Prediction():
 		FP = 0
 		FN = 0
 
+		threshold = min(prediction)*0.8
+
 		for i in xrange(0, len(prediction)):
-			if (prediction[i] == 1) and (classes[i] == 0):
+			if (prediction[i] >= threshold) and (classes[i] == 0):
 				TN += 1
-			elif (prediction[i] == -1) and (classes[i] == 1):
+			elif (prediction[i] < threshold) and (classes[i] == 1):
 				TP += 1
-			elif (prediction[i] == 1) and (classes[i] == 1):
+			elif (prediction[i] >= threshold) and (classes[i] == 1):
 				FN += 1
-			elif (prediction[i] == -1) and (classes[i] == 0):
+			elif (prediction[i] < threshold) and (classes[i] == 0):
 				FP += 1
 		accuracy = (TP+TN)/(TP+TN+FP+FN)
-		recall = TP/(TP+FP)
-		precision = TP/(TP+FN)
+		recall = TP/(TP+FN)
+		precision = TP/(TP+FP)
 		f1 = (2*recall*precision)/(recall+precision)
 
 		print('Accuracy: ' + str(accuracy))
@@ -1122,104 +1425,201 @@ class Prediction():
 
 	# Cache the training and testing data
 	def cache_save(self, features1, classes1, features2, classes2):
-		directory = 'cache/'
-
-		f1 = 'cache-learning-features-1.csv'
-		c1 = 'cache-learning-class-1.csv'
-		f2 = 'cache-test-features-1.csv'
-		c2 = 'cache-test-class-1.csv'
-
-		with open(directory+f1, 'wb') as csvfile:
+		with open(self.directory+self.f1, 'wb') as csvfile:
 			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
 			for row in features1:
 				datawriter.writerow(row)
 
-		with open(directory+c1, 'wb') as csvfile:
+		with open(self.directory+self.c1, 'wb') as csvfile:
 			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
 			for row in classes1:
 				datawriter.writerow([row])
 
-		with open(directory+f2, 'wb') as csvfile:
+		with open(self.directory+self.f2, 'wb') as csvfile:
 			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
 			for row in features2:
 				datawriter.writerow(row)
 
-		with open(directory+c2, 'wb') as csvfile:
+		with open(self.directory+self.c2, 'wb') as csvfile:
 			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
 			for row in classes2:
 				datawriter.writerow([row])
 
 	def cache_read(self):
-		directory = 'cache/'
-
-		f1 = 'cache-learning-features-1.csv'
-		c1 = 'cache-learning-class-1.csv'
-		f2 = 'cache-test-features-1.csv'
-		c2 = 'cache-test-class-1.csv'
-
 		features1 = []
 		features2 = []
 		classes1 = []
 		classes2 = []
 
-		with open(directory+f1, 'rb') as csvfile:
+		with open(self.directory+self.f1, 'rb') as csvfile:
 			datareader = csv.reader(csvfile, delimiter=' ', quotechar='|')
 			for row in datareader:
-				features1.append(row)
+				features1.append([float(x) for x in row])
 
-		with open(directory+f2, 'rb') as csvfile:
+		with open(self.directory+self.f2, 'rb') as csvfile:
 			datareader = csv.reader(csvfile, delimiter=' ', quotechar='|')
 			for row in datareader:
-				features2.append(row)
+				features2.append([float(x) for x in row])
 
-		with open(directory+c1, 'rb') as csvfile:
+		with open(self.directory+self.c1, 'rb') as csvfile:
 			datareader = csv.reader(csvfile, delimiter=' ', quotechar='|')
 			for row in datareader:
-				classes1.append(row[0])
+				classes1.append(int(row[0]))
 
-		with open(directory+c2, 'rb') as csvfile:
+		with open(self.directory+self.c2, 'rb') as csvfile:
 			datareader = csv.reader(csvfile, delimiter=' ', quotechar='|')
 			for row in datareader:
-				classes2.append(row[0])
+				classes2.append(int(row[0]))
 
 		return features1, classes1, features2, classes2
 
 	# Check if cache files are present
 	def cache_check(self):
-		directory = 'cache/'
+		return os.path.exists(self.directory+self.f1) and os.path.exists(self.directory+self.f2) and os.path.exists(self.directory+self.c1) and os.path.exists(self.directory+self.c2) 
 
-		f1 = 'cache-learning-features-1.csv'
-		f2 = 'cache-learning-class-1.csv'
-		c1 = 'cache-test-features-1.csv'
-		c2 = 'cache-test-class-1.csv'
+	# Filter out positive class
+	# For anomaly detection
+	def filter_classes(self, feature, classes):
+		f = []
+		c = []
 
-		return os.path.exists(directory+f1) and os.path.exists(directory+f2) and os.path.exists(directory+c1) and os.path.exists(directory+c2) 
+		pos_index = []
 
-	def anomaly_detection(self):
-		print('Features 1')
-		features1, classes1 = self.get_features(1,24,sample=True, one_class=True)
-		print('Features 2')
-		features2, classes2 = self.get_features(24,48,sample=False)
-		print('Features 3')
-		features3, classes3 = self.get_features(48,72,sample=False, last=True)
-		
+		for i in xrange(0, len(classes)):
+			if classes[i] == 1:
+				pos_index.append(i)
+			else:
+				c.append(classes[i])
+
+		for i in xrange(0, len(feature)):
+			if i not in pos_index:
+				f.append(feature[i])
+
+		return f,c
+
+	# Valance the classes in training data
+	def balance_data(self, feature, classes, N=1):
+		f1 = []
+		c1 = []
+		f2 = []
+		c2 = []
+		w1 = 1
+		w0 = 1
+
+		pos_index = []
+
+		for i in xrange(0, len(classes)):
+			if classes[i] == 1:
+				pos_index.append(i)
+				c1.append(classes[i])
+			else:
+				c2.append(classes[i])
+
+		w1 = len(classes)/len(c1)
+		w0 = len(classes)/len(c2)
+
+		print((len(classes), len(c1), len(c2)))
+
+		for i in xrange(0, len(feature)):
+			if i in pos_index:
+				f1.append(feature[i])
+			else:
+				f2.append(feature[i])
+
+		random.shuffle(f2)
+
+		f = f1*N + f2[:N*len(f1)]
+		c = [1]*(len(f1)*N) + [0]*(N*len(f1))
+
+		return f, c, w0, w1
+
+	def get_predicted_outliers(self, feature, classes, predicted):
+		f = []
+		c = []
+
+		for i in xrange(0, len(predicted)):
+			if predicted[i] == -1 :
+				f.append(feature[i])
+				c.append(classes[i])
+
+		return f, c
+
+	def anomaly_detection(self, feature1=None, class1=None, feature2=None, class2=None):
+		if self.cache_check():
+			print('Cache found. Reading.')
+			features1, classes2, features2, classes3 = self.cache_read()
+		else:
+			print('Cache not found. Constructing.')
+			print('Features 1')
+			features1, classes1 = self.get_features(self.t1,self.t2,sample=False, one_class=False, comm_sample=True)
+			print('Features 2')
+			features2, classes2 = self.get_features(self.t2,self.t3,sample=False)
+			print('Features 3')
+			features3, classes3 = self.get_features(self.t3,self.t4,sample=False, last=True)
+
+			self.cache_save(features1, classes2, features2, classes3)
+
+		if feature1 is not None:
+			features1 = feature1
+
+		if feature2 is not None:
+			features2 = feature2
+
+		if class1 is not None:
+			classes2 = class1
+
+		if class2 is not None:
+			classes3 = class2
+
+		features1, classes2 = self.filter_classes(features1, classes2)
+
+		prediction_aggregate = None
+
 		print('Fitting model')
-		clf = svm.OneClassSVM()
+		clf = svm.OneClassSVM(nu=(500/9900), kernel="rbf", gamma=0.1)
 		clf.fit(features1)
 
 		print('Predicting')
 		prediction = clf.predict(features2)
 
+		self.anomaly_report(prediction, classes3)
+
 		print('Constructing the classification report')
 		self.anomaly_report(prediction, classes3)
 
-	def run(self, v):
-		if v == 'l':
-			self.supervised_learn()
-		elif v == 'a':
+		f, c = self.get_predicted_outliers(features2, classes3, prediction)
+		
+		return f, c
+
+	def run(self, v1, v2=None):
+		if v1 == 'l':
+			self.supervised_learn(algorithm='nbc')
+		elif v1 == 'a':
 			self.anomaly_detection()
+		elif v1 == 'anomaly_loop':
+			f = None
+			c = None
+			for _ in xrange(1,10):
+				f, c = self.anomaly_detection(feature2=f, class2=c)
+		elif v1 == 'al':
+			f, c = self.anomaly_detection()
+			self.supervised_learn(feature2=f, class2=c, algorithm='svm')
+		elif v1 == 'community':
+			self.update_network(1,72)
+			self.community_clique(4)
+		elif v1 == 'draw':
+			self.update_network(1,24)
+			print('Getting the community')
+			self.community_clique(5)
+			print('Drawing the graph')
+			networkx.draw_networkx(self.network.get_graph(),pos=networkx.spring_layout(self.network.get_graph()),nodelist=self.users_sample)
+			print('Saving the graph')
+			plt.savefig('img/'+'network-'+v2+'.png')
 
 if __name__ == '__main__':
 	#compare_measures()
-	p = Prediction(5000)
-	p.run(sys.argv[1])
+	arg1 = sys.argv[1]
+	arg2 = sys.argv[2]
+	
+	p = Prediction(N=100, m_type=arg2, t1=150, t2=318, t3=486, t4=654)
+	p.run(arg1, arg2)
