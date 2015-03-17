@@ -14,6 +14,7 @@ from sklearn.ensemble import ExtraTreesClassifier
 from sklearn import covariance
 from sklearn.metrics import classification_report
 from sklearn.metrics import f1_score
+from sklearn import cross_validation
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
@@ -1060,10 +1061,10 @@ class Prediction():
 
 		self.directory = 'cache/'
 
-		self.f1 = 'cache-learning-features-k4-100-168-'+m_type+'-7.csv'
-		self.c1 = 'cache-learning-class-k4-100-168-'+m_type+'-7.csv'
-		self.f2 = 'cache-test-features-k4-100-168-'+m_type+'-7.csv'
-		self.c2 = 'cache-test-class-k4-100-168-'+m_type+'-7.csv'
+		self.f1 = 'cache-learning-features-k4-100-168-'+m_type+'-8.csv'
+		self.c1 = 'cache-learning-class-k4-100-168-'+m_type+'-8.csv'
+		self.f2 = 'cache-test-features-k4-100-168-'+m_type+'-8.csv'
+		self.c2 = 'cache-test-class-k4-100-168-'+m_type+'-8.csv'
 
 		#self.f1 = 'cache-learning-features-test-data.csv'
 		#self.c1 = 'cache-learning-class-test-data.csv'
@@ -1201,7 +1202,7 @@ class Prediction():
 			self.get_sample(edges)
 
 		if comm_sample:
-			self.community_clique(4)
+			self.community_clique(3, n=20)
 
 		features = []
 		classes = []
@@ -1257,13 +1258,35 @@ class Prediction():
 			#parameters = {'kernel':('linear', 'rbf'), 'C':[1, 10]}
 			#svr = svm.SVC()
 			#clf = grid_search.GridSearchCV(svr, parameters)
-			clf = svm.SVC(class_weight={1:w1, 0:w0},kernel="linear")
+			clf = svm.SVC(class_weight={1:w1, 0:w0},kernel="rbf", probability=True)
 
 		clf.fit(features1, classes1)
 
 		print('Predicting')
-		prediction = clf.predict(features2)
+		prediction1 = clf.predict(features2)
+		count = sum(prediction1)
+		#print(prediction[:5])
+		prediction = clf.predict_proba(features2)
+		#print(prediction[:5])
 		
+		#print(prediction[:5])
+
+		s0 = []
+		s1 = []
+		for i in xrange(0, len(classes2)):
+			if classes2[i] == 1:
+				#print(prediction[i])
+				s1.append(prediction[i][1])
+			else:
+				s0.append(prediction[i][1])
+		print(sum(s1)/len(s1))
+		print(sum(s0)/len(s0))
+		print(max(s0))
+
+		prediction = [ 1 if x[1] >= 0.025 else 0 for x in prediction ]
+
+
+
 		if report or True:
 			print('Constructing the classification report')
 			print(classification_report(classes2, prediction))
@@ -1308,7 +1331,7 @@ class Prediction():
 				print('Max found')
 				if (s1 > s2) and (s1 > s_max) :
 					w_opt = w_1
-				elif (s2 > s_max):
+				elif (s2probab > s_max):
 					w_opt = w_2
 				break
 
@@ -1371,13 +1394,13 @@ class Prediction():
 		if class2 is not None:
 			classes3 = class2
 		
-		features1, classes2, w_0, w_1 = self.balance_data(features1, classes2, N=5)
+		#features1, classes2, w0, w1 = self.balance_data(features1, classes2, N=5)
 		#features2, classes3, t_0, t_1 = self.balance_data(features2, classes3, N=5)
 		
-		w0 = 1
-		w1 = 1
+		#w0 = 1
+		#w1 = 1
 
-		#t_f, t_c, w0, w1 = self.balance_data(features1, classes2, N=10)
+		t_f, t_c, w0, w1 = self.balance_data(features1, classes2, N=10)
 
 		w_opt = None
 		if algorithm == 'svm_iterate':
@@ -1401,7 +1424,7 @@ class Prediction():
 		FP = 0
 		FN = 0
 
-		threshold = min(prediction)*0.8
+		threshold = min(prediction)*0.9
 
 		for i in xrange(0, len(prediction)):
 			if (prediction[i] >= threshold) and (classes[i] == 0):
@@ -1422,6 +1445,8 @@ class Prediction():
 		print('Precision: ' + str(precision))
 		print('F1: '+ str(f1))
 		print((TP,TN,FP,FN))
+
+		return accuracy, recall, precision, f1
 
 	# Cache the training and testing data
 	def cache_save(self, features1, classes1, features2, classes2):
@@ -1573,16 +1598,13 @@ class Prediction():
 
 		features1, classes2 = self.filter_classes(features1, classes2)
 
-		prediction_aggregate = None
-
+		
 		print('Fitting model')
-		clf = svm.OneClassSVM(nu=(500/9900), kernel="rbf", gamma=0.1)
+		clf = svm.OneClassSVM(nu=(206/9900), kernel="rbf", gamma=0.1)
 		clf.fit(features1)
 
 		print('Predicting')
 		prediction = clf.predict(features2)
-
-		self.anomaly_report(prediction, classes3)
 
 		print('Constructing the classification report')
 		self.anomaly_report(prediction, classes3)
@@ -1593,7 +1615,7 @@ class Prediction():
 
 	def run(self, v1, v2=None):
 		if v1 == 'l':
-			self.supervised_learn(algorithm='nbc')
+			self.supervised_learn(algorithm='svm')
 		elif v1 == 'a':
 			self.anomaly_detection()
 		elif v1 == 'anomaly_loop':
@@ -1603,7 +1625,7 @@ class Prediction():
 				f, c = self.anomaly_detection(feature2=f, class2=c)
 		elif v1 == 'al':
 			f, c = self.anomaly_detection()
-			self.supervised_learn(feature2=f, class2=c, algorithm='svm')
+			self.supervised_learn(feature2=f, class2=c, algorithm='random_forest')
 		elif v1 == 'community':
 			self.update_network(1,72)
 			self.community_clique(4)
@@ -1621,5 +1643,5 @@ if __name__ == '__main__':
 	arg1 = sys.argv[1]
 	arg2 = sys.argv[2]
 	
-	p = Prediction(N=100, m_type=arg2, t1=150, t2=318, t3=486, t4=654)
+	p = Prediction(N=200, m_type=arg2, t1=150, t2=318, t3=390, t4=462)
 	p.run(arg1, arg2)
