@@ -4,6 +4,7 @@ from __future__ import division
 import math, operator, random, numpy, networkx, sys, os.path, csv, time
 from libs import database, graph, data
 from scipy import linalg
+from scipy import stats
 from pprint import pprint
 from sklearn import svm, grid_search
 from sklearn.tree import DecisionTreeClassifier
@@ -13,6 +14,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn import covariance
 from sklearn.metrics import classification_report
+from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.metrics import f1_score
 from sklearn import cross_validation
 import matplotlib.pyplot as plt
@@ -40,12 +42,14 @@ class MeasuresNoWeight():
 		rgraph = self._network.get_reverse_graph()
 
 		for i in xrange(0, len(nodes)):
+			self.cprint(str(i+1)+'/'+str(len(nodes)))
 			for j in xrange(i, len(nodes)):
 				neighbors_out = list(set.intersection(set(graph[nodes[i]].keys()), set(graph[nodes[j]].keys())))
 				neighbors_in = list(set.intersection(set(rgraph[nodes[i]].keys()), set(rgraph[nodes[j]].keys())))
 
 				self._common_neighbors[(nodes[i], nodes[j])] = len(neighbors_out) + len(neighbors_in)
 				self._common_neighbors[(nodes[j], nodes[i])] = self._common_neighbors[(nodes[i], nodes[j])]
+		print('')
 		return self._common_neighbors
 
 	def cprint(self, v):
@@ -68,6 +72,7 @@ class MeasuresNoWeight():
 
 				self._adamic_adar[(nodes[i], nodes[j])] = sum([1/(math.log(max(1.01,len(graph[z])))) for z in neighbors_out ]) + sum([1/(math.log(max(1.01,len(rgraph[z])))) for z in neighbors_in ])
 				self._adamic_adar[(nodes[j], nodes[i])] = self._adamic_adar[(nodes[i], nodes[j])]
+		print('')
 		return self._adamic_adar
 
 	def preferentail_attachment(self, nodes=None):
@@ -83,6 +88,7 @@ class MeasuresNoWeight():
 			for j in xrange(i, len(nodes)):
 				self._preferentail_attachment[(nodes[i], nodes[j])] = len(graph[nodes[i]])*len(graph[nodes[j]]) + len(rgraph[nodes[i]])*len(rgraph[nodes[j]])
 				self._preferentail_attachment[(nodes[j], nodes[i])] = self._preferentail_attachment[(nodes[i], nodes[j])]
+		print('')
 		return self._preferentail_attachment
 
 	def jaccard_coefficient(self, nodes=None):
@@ -104,7 +110,7 @@ class MeasuresNoWeight():
 
 				self._jaccard_coefficient[(nodes[i], nodes[j])] = len(neighbors_out_inter)/max(1,len(neighbors_out_union)) + len(neighbors_in_inter)/max(1,len(neighbors_in_union))
 				self._jaccard_coefficient[(nodes[j], nodes[i])] = self._jaccard_coefficient[(nodes[i], nodes[j])]
-
+		print('')
 		return self._jaccard_coefficient
 
 	def shortest_path(self, nodes=None):
@@ -125,6 +131,7 @@ class MeasuresNoWeight():
 						shortest = networkx.shortest_path(graph, source=nodes[i], target=nodes[j])
 						score = 1/(math.log(1+len(shortest)))
 					self._shortest_path[(nodes[i], nodes[j])] = score
+		print('')
 		return self._shortest_path
 
 	def katz_score(self, nodes=None):
@@ -146,10 +153,10 @@ class MeasuresNoWeight():
 					if networkx.has_path(graph, source=nodes[i], target=nodes[j]) :
 						paths = networkx.all_simple_paths(graph, source=nodes[i], target=nodes[j], cutoff=3)
 						for path in paths:
-							print(len(path))
 							path_length = len(path) - 1
 							score += math.pow(beta, path_length)
 					self._katz_score[(nodes[i], nodes[j])] = score
+		print('')
 		return self._katz_score
 
 	def page_rank(self, nodes=None):
@@ -252,8 +259,9 @@ class MeasuresNoWeight():
 
 			for i in xrange(0, len(all_nodes)):
 				if (all_nodes[i] in nodes) and (all_nodes[i] != root):
-					self._page_rank[(root, all_nodes[i])] = r_pr[i]
+					self._page_rank[(root, all_nodes[i])] = numpy.real(r_pr[i])
 
+		print('')
 		return self._page_rank
 
 class MeasuresWeightAM():
@@ -525,7 +533,7 @@ class MeasuresWeightAM():
 
 			for i in xrange(0, len(all_nodes)):
 				if (all_nodes[i] in nodes) and (all_nodes[i] != root):
-					self._page_rank[(root, all_nodes[i])] = r_pr[i]
+					self._page_rank[(root, all_nodes[i])] = numpy.real(r_pr[i])
 
 		print('')
 		return self._page_rank
@@ -1046,7 +1054,7 @@ class Prediction():
 		#self.time_start, self.time_end = self.db.get_time_min_max()
 		self.time_start = 1422289905
 
-		self.network = graph.SocialNetwork(0.1, self.users_valid)
+		self.network = graph.SocialNetwork(0.1, self.users_valid, weighted=False)
 		self.network.initialize_nodes(self.users_valid)
 
 		# Get edges and construct the graph for 36 hours
@@ -1061,10 +1069,10 @@ class Prediction():
 
 		self.directory = 'cache/'
 
-		self.f1 = 'cache-learning-features-k4-100-168-'+m_type+'-8.csv'
-		self.c1 = 'cache-learning-class-k4-100-168-'+m_type+'-8.csv'
-		self.f2 = 'cache-test-features-k4-100-168-'+m_type+'-8.csv'
-		self.c2 = 'cache-test-class-k4-100-168-'+m_type+'-8.csv'
+		self.f1 = 'cache-learning-features-k3-100m20-168-'+m_type+'-11.csv'
+		self.c1 = 'cache-learning-class-k3-100m20-168-'+m_type+'-11.csv'
+		self.f2 = 'cache-test-features-k3-100m20-168-'+m_type+'-11.csv'
+		self.c2 = 'cache-test-class-k3-100m20-168-'+m_type+'-11.csv'
 
 		#self.f1 = 'cache-learning-features-test-data.csv'
 		#self.c1 = 'cache-learning-class-test-data.csv'
@@ -1167,27 +1175,27 @@ class Prediction():
 						f.append(0)
 
 					if (n1,n2) in jaccard_coefficient :
-						f.append(common_neighbors[(n1,n2)])
+						f.append(jaccard_coefficient[(n1,n2)])
 					else:
 						f.append(0)
 
 					if (n1,n2) in preferentail_attachment :
-						f.append(common_neighbors[(n1,n2)])
+						f.append(preferentail_attachment[(n1,n2)])
 					else:
 						f.append(0)
 
 					if (n1,n2) in katz_score :
-						f.append(common_neighbors[(n1,n2)])
+						f.append(katz_score[(n1,n2)])
 					else:
 						f.append(0)
 
 					if (n1,n2) in shortest_path :
-						f.append(common_neighbors[(n1,n2)])
+						f.append(shortest_path[(n1,n2)])
 					else:
 						f.append(0)
 
 					if (n1,n2) in rooted_page_rank :
-						f.append(common_neighbors[(n1,n2)])
+						f.append(rooted_page_rank[(n1,n2)])
 					else:
 						f.append(0)
 
@@ -1202,7 +1210,7 @@ class Prediction():
 			self.get_sample(edges)
 
 		if comm_sample:
-			self.community_clique(3, n=20)
+			self.community_clique(3,n=20)
 
 		features = []
 		classes = []
@@ -1226,17 +1234,53 @@ class Prediction():
 		preferentail_attachment = mes.preferentail_attachment(self.users_sample)
 		print('Jaccard Coefficient')
 		jaccard_coefficient = mes.jaccard_coefficient(self.users_sample)
-		print('Rooted Page Rank')
-		rooted_page_rank = mes.page_rank(self.users_sample)
-		print('Katz Score')
-		katz_score = mes.katz_score(self.users_sample)
-		print('Shortest Path')
-		shortest_path = mes.shortest_path(self.users_sample)
 		
+		if self.m_type != 'no' or True:
+			print('Rooted Page Rank')
+			rooted_page_rank = mes.page_rank(self.users_sample)
+			print('Katz Score')
+			katz_score = mes.katz_score(self.users_sample)
+			print('Shortest Path')
+			shortest_path = mes.shortest_path(self.users_sample)
+			
+		else:
+			rooted_page_rank = [0]*len(jaccard_coefficient)
+			katz_score = [0]*len(jaccard_coefficient)
+			shortest_path = [0]*len(jaccard_coefficient)
+
 		print('Constructing features')
 		features, classes = self.construct_features(edges, common_neighbors, adamic_adar, preferentail_attachment, jaccard_coefficient, shortest_path, katz_score, rooted_page_rank, one_class=one_class)
 
 		return features, classes
+
+	def learn_get_f1_prob(self, features1, features2, classes1, classes2,w1=1,w0=1):
+		
+		prediction = None
+		for i in xrange(0, 10):
+			print('Loop: '+ str(i))
+			clf = svm.SVC(class_weight={1:w1, 0:w0},kernel="rbf", probability=True)
+			f, c ,t1, t2 = self.balance_data(features1, classes1, N=5)
+			clf.fit(f, c)
+
+			p = clf.predict_proba(features2)
+
+			if prediction is None:
+				prediction = [x[1] for x in p] 
+			else:
+				prediction = [ (prediction[i]*p[i][1]) for i in xrange(0, len(p)) ]
+
+		pprint(roc_auc_score(classes2, prediction, average='weighted'))
+
+		# Plot the ROC curve and save
+		fpr, tpr, _ = roc_curve(classes2, prediction, pos_label=1 )
+		plt.figure()
+		plt.plot(fpr, tpr)
+		plt.plot([0, 1], [0, 1], 'k--')
+		plt.xlim([0.0, 1.0])
+		plt.ylim([0.0, 1.05])
+		plt.xlabel('False Positive Rate')
+		plt.ylabel('True Positive Rate')
+		plt.savefig('img/roc-'+str(time.time())+'.png')
 
 	# Set weight of class 0; between 1 and 0
 	def learn_get_f1(self, weight0, features1, features2, classes1, classes2, report=False, algorithm='svm',w1=1,w0=1):
@@ -1264,7 +1308,7 @@ class Prediction():
 
 		print('Predicting')
 		prediction1 = clf.predict(features2)
-		count = sum(prediction1)
+		print(sum(prediction1))
 		#print(prediction[:5])
 		prediction = clf.predict_proba(features2)
 		#print(prediction[:5])
@@ -1282,10 +1326,11 @@ class Prediction():
 		print(sum(s1)/len(s1))
 		print(sum(s0)/len(s0))
 		print(max(s0))
+		print(min(s1))
+		print(stats.scoreatpercentile(s0, 99))
+		print(stats.scoreatpercentile(s0, 5))
 
-		prediction = [ 1 if x[1] >= 0.025 else 0 for x in prediction ]
-
-
+		prediction = [ 1 if x[1] >= 0.1 else 0 for x in prediction ]
 
 		if report or True:
 			print('Constructing the classification report')
@@ -1397,10 +1442,14 @@ class Prediction():
 		#features1, classes2, w0, w1 = self.balance_data(features1, classes2, N=5)
 		#features2, classes3, t_0, t_1 = self.balance_data(features2, classes3, N=5)
 		
-		#w0 = 1
-		#w1 = 1
+		w0 = 1
+		w1 = 1
 
-		t_f, t_c, w0, w1 = self.balance_data(features1, classes2, N=10)
+		#t_f, t_c, w0, w1 = self.balance_data(features1, classes2, N=10)
+
+		if algorithm == 'svm_prob':
+			self.learn_get_f1_prob(features1, features2, classes2, classes3)
+			return True
 
 		w_opt = None
 		if algorithm == 'svm_iterate':
@@ -1615,7 +1664,7 @@ class Prediction():
 
 	def run(self, v1, v2=None):
 		if v1 == 'l':
-			self.supervised_learn(algorithm='svm')
+			self.supervised_learn(algorithm='svm_prob')
 		elif v1 == 'a':
 			self.anomaly_detection()
 		elif v1 == 'anomaly_loop':
@@ -1643,5 +1692,5 @@ if __name__ == '__main__':
 	arg1 = sys.argv[1]
 	arg2 = sys.argv[2]
 	
-	p = Prediction(N=200, m_type=arg2, t1=150, t2=318, t3=390, t4=462)
+	p = Prediction(N=100, m_type=arg2, t1=150, t2=318, t3=486, t4=654)
 	p.run(arg1, arg2)
