@@ -1069,10 +1069,10 @@ class Prediction():
 
 		self.directory = 'cache/'
 
-		self.f1 = 'cache-learning-features-k3-100m20-168-'+m_type+'-11.csv'
-		self.c1 = 'cache-learning-class-k3-100m20-168-'+m_type+'-11.csv'
-		self.f2 = 'cache-test-features-k3-100m20-168-'+m_type+'-11.csv'
-		self.c2 = 'cache-test-class-k3-100m20-168-'+m_type+'-11.csv'
+		self.f1 = 'cache-learning-features-k5-100-168-'+m_type+'-11.csv'
+		self.c1 = 'cache-learning-class-k5-100-168-'+m_type+'-11.csv'
+		self.f2 = 'cache-test-features-k5-100-168-'+m_type+'-11.csv'
+		self.c2 = 'cache-test-class-k5-100-168-'+m_type+'-11.csv'
 
 		#self.f1 = 'cache-learning-features-test-data.csv'
 		#self.c1 = 'cache-learning-class-test-data.csv'
@@ -1210,7 +1210,7 @@ class Prediction():
 			self.get_sample(edges)
 
 		if comm_sample:
-			self.community_clique(3,n=20)
+			self.community_clique(5)
 
 		features = []
 		classes = []
