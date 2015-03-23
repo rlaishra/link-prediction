@@ -1054,7 +1054,7 @@ class Prediction():
 		#self.time_start, self.time_end = self.db.get_time_min_max()
 		self.time_start = 1422289905
 
-		self.network = graph.SocialNetwork(0.1, self.users_valid, weighted=False)
+		self.network = graph.SocialNetwork(0.1, self.users_valid, weighted=True)
 		self.network.initialize_nodes(self.users_valid)
 
 		# Get edges and construct the graph for 36 hours
@@ -1069,10 +1069,10 @@ class Prediction():
 
 		self.directory = 'cache/'
 
-		self.f1 = 'cache-learning-features-k5-100-168-'+m_type+'-11.csv'
-		self.c1 = 'cache-learning-class-k5-100-168-'+m_type+'-11.csv'
-		self.f2 = 'cache-test-features-k5-100-168-'+m_type+'-11.csv'
-		self.c2 = 'cache-test-class-k5-100-168-'+m_type+'-11.csv'
+		self.f1 = 'cache-learning-features-k5-200-168-'+m_type+'-12.csv'
+		self.c1 = 'cache-learning-class-k5-200-168-'+m_type+'-12.csv'
+		self.f2 = 'cache-test-features-k5-200-168-'+m_type+'-12.csv'
+		self.c2 = 'cache-test-class-k5-200-168-'+m_type+'-12.csv'
 
 		#self.f1 = 'cache-learning-features-test-data.csv'
 		#self.c1 = 'cache-learning-class-test-data.csv'
@@ -1126,6 +1126,8 @@ class Prediction():
 		print('Community size: ' + str(len(nodes)))
 
 		self.users_sample = nodes[:self.sample_size]
+
+		self.save_community_nodes()
 
 	def get_sample(self, edges):
 		# Construct edges with links list
@@ -1497,6 +1499,13 @@ class Prediction():
 
 		return accuracy, recall, precision, f1
 
+	# Save nodes in the community
+	def save_community_nodes(self):
+		with open('cache/community_nodes.csv', 'wb') as csvfile:
+			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+			for row in self.users_sample:
+				datawriter.writerow([row])
+
 	# Cache the training and testing data
 	def cache_save(self, features1, classes1, features2, classes2):
 		with open(self.directory+self.f1, 'wb') as csvfile:
@@ -1676,8 +1685,8 @@ class Prediction():
 			f, c = self.anomaly_detection()
 			self.supervised_learn(feature2=f, class2=c, algorithm='random_forest')
 		elif v1 == 'community':
-			self.update_network(1,72)
-			self.community_clique(4)
+			self.update_network(150,318)
+			self.community_clique(5)
 		elif v1 == 'draw':
 			self.update_network(1,24)
 			print('Getting the community')
@@ -1692,5 +1701,5 @@ if __name__ == '__main__':
 	arg1 = sys.argv[1]
 	arg2 = sys.argv[2]
 	
-	p = Prediction(N=100, m_type=arg2, t1=150, t2=318, t3=486, t4=654)
+	p = Prediction(N=200, m_type=arg2, t1=150, t2=318, t3=486, t4=654)
 	p.run(arg1, arg2)
