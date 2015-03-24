@@ -18,279 +18,6 @@ from sklearn import cross_validation
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
-class MeasuresWeightAM():
-	def __init__(self, network):
-		self._network = network
-
-		self._common_neighbors 	= None
-		self._jaccard_coefficient = None
-		self._adamic_adar = None
-		self._preferentail_attachment = None
-		self._shortest_path = None
-
-	def cprint(self, v):
-		sys.stdout.write("\r%s" % v)
-		sys.stdout.flush()
-
-	def common_neighbors(self, nodes=None):
-		# If common neighbors has not been calculates, calculate it
-		self._common_neighbors = {}
-
-		if nodes is None:
-			nodes = self._network.get_sample_nodes()
-		graph = self._network.get_graph()
-		rgraph = self._network.get_reverse_graph()
-
-		for i in xrange(0, len(nodes)):
-			self.cprint(str(i+1)+'/'+str(len(nodes)))
-			for j in xrange(i, len(nodes)):
-				neighbors_out = list(set.intersection(set(graph[nodes[i]].keys()), set(graph[nodes[j]].keys())))
-				neighbors_in = list(set.intersection(set(rgraph[nodes[i]].keys()), set(rgraph[nodes[j]].keys())))
-
-				self._common_neighbors[(nodes[i], nodes[j])] = sum([ (graph[nodes[i]][x]['weight'] + graph[nodes[j]][x]['weight'])/2 for x in neighbors_out]) + sum([ (rgraph[nodes[i]][x]['weight'] + rgraph[nodes[j]][x]['weight'])/2 for x in neighbors_in])
-				self._common_neighbors[(nodes[j], nodes[i])] = self._common_neighbors[(nodes[i], nodes[j])]
-		print('')
-		return self._common_neighbors
-
-	def adamic_adar(self, nodes=None):
-		self._adamic_adar = {}
-
-		if nodes is None:
-			nodes = self._network.get_sample_nodes()
-		graph = self._network.get_graph()
-		rgraph = self._network.get_reverse_graph()
-
-		for i in xrange(0, len(nodes)):
-			self.cprint(str(i+1)+'/'+str(len(nodes)))
-			for j in xrange(i, len(nodes)):
-				neighbors_out = list(set.intersection(set(graph[nodes[i]].keys()), set(graph[nodes[j]].keys())))
-				neighbors_in = list(set.intersection(set(rgraph[nodes[i]].keys()), set(rgraph[nodes[j]].keys())))
-
-				#adamic_adar_out = sum([ (graph[nodes[i]][x]['weight'] + graph[nodes[j]][x]['weight'])/(2 * math.log(max(1.01, sum([graph[x][z]['weight'] for z in graph[x] ])))) for x in neighbors_out ])
-				#adamic_adar_in = sum([ (rgraph[nodes[i]][x]['weight'] + rgraph[nodes[j]][x]['weight'])/(2 * math.log(max(1.01, sum([rgraph[x][z]['weight'] for z in rgraph[x] ])))) for x in neighbors_in ])
-
-				adamic_adar_out = sum([ (graph[nodes[i]][x]['weight'] + graph[nodes[j]][x]['weight'])/(2 * math.log(1.001 + sum([graph[x][z]['weight'] for z in graph[x] ]))) for x in neighbors_out ])
-				adamic_adar_in = sum([ (rgraph[nodes[i]][x]['weight'] + rgraph[nodes[j]][x]['weight'])/(2 * math.log(1.001 + sum([rgraph[x][z]['weight'] for z in rgraph[x] ]))) for x in neighbors_in ])
-
-				self._adamic_adar[(nodes[i], nodes[j])] = adamic_adar_in + adamic_adar_out
-				self._adamic_adar[(nodes[j], nodes[i])] = self._adamic_adar[(nodes[i], nodes[j])]
-		print('')
-		return self._adamic_adar
-
-	def preferentail_attachment(self, nodes=None):
-		self._preferentail_attachment = {}
-
-		if nodes is None:
-			nodes = self._network.get_sample_nodes()
-		graph = self._network.get_graph()
-		rgraph = self._network.get_reverse_graph()
-
-		for i in xrange(0, len(nodes)):
-			self.cprint(str(i+1)+'/'+str(len(nodes)))
-			for j in xrange(i, len(nodes)):
-				self._preferentail_attachment[(nodes[i], nodes[j])] = sum([ graph[nodes[i]][x]['weight'] for x in graph[nodes[i]] ])*sum([ graph[nodes[j]][x]['weight'] for x in graph[nodes[j]] ]) + sum([ rgraph[nodes[i]][x]['weight'] for x in rgraph[nodes[i]] ])*sum([ rgraph[nodes[j]][x]['weight'] for x in rgraph[nodes[j]] ])
-				self._preferentail_attachment[(nodes[j], nodes[i])] = self._preferentail_attachment[(nodes[i], nodes[j])]
-		print('')
-		return self._preferentail_attachment
-
-	# Extended jaccard coefficient
-	def jaccard_coefficient(self, nodes=None):
-		self._jaccard_coefficient = {}
-
-		if nodes is None:
-			nodes = self._network.get_sample_nodes()
-		graph = self._network.get_graph()
-		rgraph = self._network.get_reverse_graph()
-
-		for i in xrange(0, len(nodes)):
-			self.cprint(str(i+1)+'/'+str(len(nodes)))
-			for j in xrange(i, len(nodes)):
-				neighbors_out_union = list(set.union(set(graph[nodes[i]].keys()), set(graph[nodes[j]].keys())))
-				neighbors_in_union = list(set.union(set(rgraph[nodes[i]].keys()), set(rgraph[nodes[j]].keys())))
-
-				x_out = [ graph[nodes[i]][x]['weight'] if x in graph[nodes[i]].keys() else 0 for x in neighbors_out_union ]
-				y_out = [ graph[nodes[j]][x]['weight'] if x in graph[nodes[j]].keys() else 0 for x in neighbors_out_union ]
-
-				x_in = [ rgraph[nodes[i]][x]['weight'] if x in rgraph[nodes[i]].keys() else 0 for x in neighbors_in_union ]
-				y_in = [ rgraph[nodes[j]][x]['weight'] if x in rgraph[nodes[j]].keys() else 0 for x in neighbors_in_union ]
-
-				jac_out = 0
-				jac_in = 0
-
-				if len(neighbors_out_union) > 0 :
-					jac_out = numpy.dot(x_out, y_out)/max(1,(math.pow(numpy.linalg.norm(x_out),2) + math.pow(numpy.linalg.norm(x_out),2) - numpy.dot(x_out,y_out)))
-				
-				if len(neighbors_in_union) > 0 :
-					jac_in = numpy.dot(x_in, y_in)/max(1,(math.pow(numpy.linalg.norm(x_in),2) + math.pow(numpy.linalg.norm(y_in),2) - numpy.dot(x_in,y_in)))
-				
-				self._jaccard_coefficient[(nodes[i], nodes[j])] = jac_out + jac_in
-				self._jaccard_coefficient[(nodes[j], nodes[i])] = self._jaccard_coefficient[(nodes[i], nodes[j])]
-		print('')
-		return self._jaccard_coefficient
-
-	def shortest_path(self, nodes=None):
-		self._shortest_path = {}
-
-		if nodes is None:
-			nodes = self._network.get_sample_nodes()
-		graph = self._network.get_graph()
-		rgraph = self._network.get_reverse_graph()
-
-		for i in xrange(0, len(nodes)):
-			for j in xrange(0, len(nodes)):
-				if j != i :
-					self.cprint(str(i*len(nodes)+(j+1))+'/'+str(len(nodes)*len(nodes)))
-					score = 0
-
-					if networkx.has_path(graph, source=nodes[i], target=nodes[j]) :
-						shortest_list = networkx.all_shortest_paths(graph, source=nodes[i], target=nodes[j])
-						path_length = 0
-						paths_count = 0
-						for shortest in shortest_list:
-							paths_count += 1
-							if path_length == 0:
-								path_length = len(shortest)
-							score += sum([ graph[shortest[x-1]][shortest[x]]['weight'] for x in xrange(1, len(shortest)) ])
-						# Since there is atleast one path between the nodes, [0] is safe
-						# inverse sqaure of path length to make pat length more important
-						score = score/(paths_count*path_length*path_length)
-						#pprint((score, paths_count, path_length))
-						#print('Path count: ' + str(paths_count))
-					self._shortest_path[(nodes[i], nodes[j])] = score
-		print('')
-		return self._shortest_path
-
-	def katz_score(self, nodes=None):
-		beta = 0.005
-
-		self._katz_score = {}
-
-		if nodes is None:
-			nodes = self._network.get_sample_nodes()
-		graph = self._network.get_graph()
-		rgraph = self._network.get_reverse_graph()
-
-		for i in xrange(0, len(nodes)):
-			#self.cprint(str(i+1)+'/'+str(len(nodes)))
-			for j in xrange(0, len(nodes)):
-				if j != i :
-					self.cprint(str(i*len(nodes)+(j+1))+'/'+str(len(nodes)*len(nodes)))
-					score = 0
-
-					if networkx.has_path(graph, source=nodes[i], target=nodes[j]) :
-						paths = networkx.all_simple_paths(graph, source=nodes[i], target=nodes[j], cutoff=3)
-						for path in paths:
-							path_length = len(path) - 1
-							score_temp = 0
-							score += math.pow(beta, path_length) * sum([graph[path[x-1]][path[x]]['weight'] for x in xrange(1, len(path))])/path_length
-							#for x in xrange(1, len(path)) :
-							#	score_temp += graph[path[x-1]][path[x]]['weight']
-							#score += math.pow(beta, path_length) * score_temp/path_length
-							score += math.pow(beta, path_length) * score_temp
-					self._katz_score[(nodes[i], nodes[j])] = score
-		print('')
-		return self._katz_score
-
-	def page_rank(self, nodes=None):
-		alpha = 0.7
-		frac = 0.9
-		prob_cutoff = 0.05
-
-		self._page_rank = {}
-
-		if nodes is None:
-			nodes = self._network.get_sample_nodes()
-		graph = self._network.get_graph()
-		rgraph = self._network.get_reverse_graph()
-
-		# Construct the walk matrix
-		walk_matrix = {}
-
-		# Start for each node as root
-		pr = {}
-		
-		lc = int(math.ceil(math.log(1 - frac)/math.log(1 - alpha)))	# The longest path used in modified 
-		pr = {}
-		for i in xrange(0,len(nodes)):
-			self.cprint(str(i+1)+'/'+str(len(nodes)))
-			root = nodes[i]
-			paths = [[[root]]]
-			all_nodes = [root]
-			probabilities = {}
-
-			for _ in xrange(1,lc):
-				p = []
-				for m in paths[-1]:
-					if (tuple(m) in probabilities) and (probabilities[tuple(m)]*(1 - alpha) <= prob_cutoff) :
-						continue
-					o = m[-1]
-					for q in graph[o].keys():
-						if q not in m:
-							p.append(m+[q])
-							if q not in all_nodes:
-								all_nodes.append(q)
-				if len(p) > 0:
-					paths.append(p)
-
-				# Calculate the path probabilities
-				for p2 in p:
-					n1 = p2[-2] # From
-					n2 = p2[-1] # To
-
-					# Probability of the path
-					if p2[:-1] in probabilities.keys():
-						probabilities[tuple(p2)] = probabilities[tuple(p2[:-1])]*(1 - alpha)*graph[n1][n2]['weight']/(sum([graph[n1][x]['weight'] for x in graph[n1]]))
-					else:
-						probabilities[tuple(p2)] = 1
-						for i in xrange(0, len(p2)-1):
-							probabilities[tuple(p2)] = probabilities[tuple(p2)]*(1 - alpha)*graph[p2[i]][p2[i+1]]['weight']/(sum([graph[p2[i]][x]['weight'] for x in graph[p2[i]]]))
-					
-					# The path ends with a teleprotation back to root
-					# That teleportation probability
-					if tuple(p2 + [root]) not in probabilities.keys():
-						probabilities[tuple(p2 + [root])] = probabilities[tuple(p2)]*(1 - alpha)
-					else:
-						probabilities[tuple(p2 + [root])] = probabilities[tuple(p2)]*(1 - alpha)
-			
-			paths = sorted(paths[1:])
-			
-			if len(paths) < 1:
-				continue
-			
-			# Construct the transition matrix
-			t_matrix = {}
-			for n1 in all_nodes:
-				t_matrix[n1] = {}
-				for n2 in all_nodes:
-					t_matrix[n1][n2] = 0
-
-			for p in probabilities.keys():
-				t_matrix[p[-2]][p[-1]] += probabilities[p]
-
-			# Make a stochastic matrix
-			s_matrix = []
-			for n1 in all_nodes:
-				s = sum([t_matrix[n1][x] for x in all_nodes])
-				row = [t_matrix[n1][x]/s for x in all_nodes]
-				s_matrix.append(row)
-			
-			s_matrix = numpy.array(s_matrix)
-			v = linalg.eig(s_matrix, left=True, right=False)
-			
-			dominant = v[0].tolist().index(max(v[0]))
-			r_pr = v[1][:,dominant]/sum(v[1][:,dominant])
-
-			row = {}
-			for i in xrange(0, len(all_nodes)-1):
-				if (all_nodes[i] != root) :
-					row[all_nodes[i]] = r_pr[i]
-
-			for i in xrange(0, len(all_nodes)):
-				if (all_nodes[i] in nodes) and (all_nodes[i] != root):
-					self._page_rank[(root, all_nodes[i])] = numpy.real(r_pr[i])
-
-		print('')
-		return self._page_rank
 
 class NetworkDB():
 	def __init__(self):
@@ -340,7 +67,7 @@ class NetworkDB():
 		return neighbors
 
 
-class MeasuresWeightAMIncremental(object):
+class MeasuresWeightAMIncremental():
 	
 	def __init__(self, network, nodes, decay_factor=0.9):
 		self._network = network
@@ -356,7 +83,7 @@ class MeasuresWeightAMIncremental(object):
 		self.katz_score = {}
 		self.rooted_page_rank = {}
 
-		#self._db = NetworkDB()
+		self._db = NetworkDB()
 
 		self._edges = []
 
@@ -460,14 +187,12 @@ class Main(object):
 
 	def save_features_class(self, features, mtype, i, edges=None):
 		for edge in features:
-			val = (edge[0], edge[1], i, mtype, features[edge])
-			self.dbcursor.execute('INSERT INTO `features` (`from_node`, `to_node`, `time`, `type`, `value`) VALUES (?, ?, ?, ?, ?) ', val)
+			if features[edge] > 0 :
+				val = (edge[0], edge[1], i, mtype, features[edge])
+				self.dbcursor.execute('INSERT INTO `features` (`from_node`, `to_node`, `time`, `type`, `value`) VALUES (?, ?, ?, ?, ?) ', val)
 			
-			if edges is not None:
-				class_val = 0
-				if edge in edges:
-					class_val = 1
-				val = (edge[0], edge[1], i, class_val)
+			if edges is not None and edge in edges:
+				val = (edge[0], edge[1], i, 1)
 				self.dbcursor.execute('INSERT INTO `classes` (`from_node`, `to_node`, `time`, `value`) VALUES (?, ?, ?, ?) ', val)
 		self.dbconn.commit()
 
