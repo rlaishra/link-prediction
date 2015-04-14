@@ -133,7 +133,7 @@ class MeasuresWeightAMIncremental():
 		u = edge[0]
 		v = edge[1]
 
-		if u in self._nodes and v in self._nodes:
+		if u in self._nodes and v in self._nodes:zzzzzzzzzz
 			# Check if edge is new or already exist
 			graph = self._network.get_graph()
 			link_exist = v in graph[u]

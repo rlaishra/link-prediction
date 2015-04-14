@@ -1041,7 +1041,12 @@ def compare_measures():
 		pprint(get_recall(pred, edges, R=R, directed=True))
 
 class Prediction():
-	def __init__(self,N=10000,t1=1,t2=72,t3=144,t4=216, m_type=None):
+	def __init__(self,N=10000,t1=1,t2=72,t3=144,t4=216, m_type=None, f1='3', f2='100', f3='11'):
+		self.community_size = int(f1)
+		self.f1 = f1
+		self.f2 = f2
+		self.f3 = f3
+
 		self.vals = data.Data()
 		self.db = database.Database()
 
@@ -1069,10 +1074,10 @@ class Prediction():
 
 		self.directory = 'cache/'
 
-		self.f1 = 'cache-learning-features-k5-200-168-'+m_type+'-12.csv'
-		self.c1 = 'cache-learning-class-k5-200-168-'+m_type+'-12.csv'
-		self.f2 = 'cache-test-features-k5-200-168-'+m_type+'-12.csv'
-		self.c2 = 'cache-test-class-k5-200-168-'+m_type+'-12.csv'
+		self.f1 = 'cache-learning-features-k'+f1+'-'+f2+'-168-'+m_type+'-'+f3+'.csv'
+		self.c1 = 'cache-learning-class-k'+f1+'-'+f2+'-168-'+m_type+'-'+f3+'.csv'
+		self.f2 = 'cache-test-features-k'+f1+'-'+f2+'-168-'+m_type+'-'+f3+'.csv'
+		self.c2 = 'cache-test-class-k'+f1+'-'+f2+'-168-'+m_type+'-'+f3+'.csv'
 
 		#self.f1 = 'cache-learning-features-test-data.csv'
 		#self.c1 = 'cache-learning-class-test-data.csv'
@@ -1125,7 +1130,10 @@ class Prediction():
 
 		print('Community size: ' + str(len(nodes)))
 
-		self.users_sample = nodes[:self.sample_size]
+		if self.sample_size:
+			self.users_sample = nodes[:self.sample_size]
+		else:
+			self.users_sample = nodes
 
 		self.save_community_nodes()
 
@@ -1212,7 +1220,7 @@ class Prediction():
 			self.get_sample(edges)
 
 		if comm_sample:
-			self.community_clique(5)
+			self.community_clique(self.community_size,n=False)
 
 		features = []
 		classes = []
@@ -1255,23 +1263,36 @@ class Prediction():
 
 		return features, classes
 
-	def learn_get_f1_prob(self, features1, features2, classes1, classes2,w1=1,w0=1):
+	def learn_get_f1_prob(self, features1, features2, classes1, classes2,w1=1,w0=1, algo='svm'):
 		
 		prediction = None
-		for i in xrange(0, 10):
-			print('Loop: '+ str(i))
-			clf = svm.SVC(class_weight={1:w1, 0:w0},kernel="rbf", probability=True)
+
+		if algo == 'svm':
+			for i in xrange(0, 10):
+				print('Loop: '+ str(i))
+				clf = svm.SVC(class_weight={1:w1, 0:w0},kernel="rbf", probability=True)
+				f, c ,t1, t2 = self.balance_data(features1, classes1, N=5)
+				clf.fit(f, c)
+
+				p = clf.predict_proba(features2)
+
+				if prediction is None:
+					prediction = [x[1] for x in p] 
+				else:
+					prediction = [ (prediction[i]*p[i][1]) for i in xrange(0, len(p)) ]
+		elif algo == 'tree':
+			clf = DecisionTreeClassifier()
 			f, c ,t1, t2 = self.balance_data(features1, classes1, N=5)
 			clf.fit(f, c)
 
 			p = clf.predict_proba(features2)
+			prediction = [ p[i][1] for i in xrange(0, len(p)) ]
 
-			if prediction is None:
-				prediction = [x[1] for x in p] 
-			else:
-				prediction = [ (prediction[i]*p[i][1]) for i in xrange(0, len(p)) ]
 
-		pprint(roc_auc_score(classes2, prediction, average='weighted'))
+		auc = roc_auc_score(classes2, prediction, average='weighted')
+		pprint(auc)
+
+		self.sample_data()
 
 		# Plot the ROC curve and save
 		fpr, tpr, _ = roc_curve(classes2, prediction, pos_label=1 )
@@ -1282,7 +1303,7 @@ class Prediction():
 		plt.ylim([0.0, 1.05])
 		plt.xlabel('False Positive Rate')
 		plt.ylabel('True Positive Rate')
-		plt.savefig('img/roc-'+str(time.time())+'.png')
+		plt.savefig('img/roc-mtype-'+self.m_type+'-auc-'+str(auc)+'-k-'+str(self.f1)+'-density-'+str(self.density)+'.png')
 
 	# Set weight of class 0; between 1 and 0
 	def learn_get_f1(self, weight0, features1, features2, classes1, classes2, report=False, algorithm='svm',w1=1,w0=1):
@@ -1423,7 +1444,7 @@ class Prediction():
 			print('Features 1')
 			features1, classes1 = self.get_features(self.t1,self.t2,sample=False, one_class=False, comm_sample=True)
 			print('Features 2')
-			features2, classes2 = self.get_features(self.t2,self.t3,sample=False)
+			features2, classes2 = self.get_features(self.t2,self.t3,sample=True)
 			print('Features 3')
 			features3, classes3 = self.get_features(self.t3,self.t4,sample=False, last=True)
 
@@ -1451,6 +1472,9 @@ class Prediction():
 
 		if algorithm == 'svm_prob':
 			self.learn_get_f1_prob(features1, features2, classes2, classes3)
+			return True
+		elif algorithm == 'tree_prob':
+			self.learn_get_f1_prob(features1, features2, classes2, classes3, algo='tree')
 			return True
 
 		w_opt = None
@@ -1671,6 +1695,58 @@ class Prediction():
 		
 		return f, c
 
+	def community_data(self):
+		graph = self.network.get_graph()
+			
+		for x in xrange(3,6):
+			self.community_clique(x)
+			size = len(self.users_sample)
+
+			print(x)
+			print('Community size: '+str(size))
+
+
+			#Density
+			d1 = 0
+			weights = []
+
+			for n in self.users_sample:
+				#pprint(graph[n])
+				w = [graph[n][m]['weight'] for m in graph[n].keys() if m in self.users_sample]
+				weights += w
+				d1 += len(w)
+
+			density = d1/(size*(size - 1))
+
+			print('Density: '+str(density))
+			pprint('Weights Variance: '+ str(numpy.var(weights)))
+
+	def sample_data(self):
+		graph = self.network.get_graph()
+		size = len(self.users_sample)
+
+		print('Community size: '+str(size))
+
+
+		#Density
+		d1 = 0
+		weights = []
+
+		for n in self.users_sample:
+			w = [graph[n][m]['weight'] for m in graph[n].keys() if m in self.users_sample]
+			weights += w
+			d1 += len(w)
+
+		density = d1/(size*(size - 1))
+		#variance = numpy.var(weights)
+
+		self.density = str(density)
+		#self.variance = str(variance)
+
+		print('Density: '+str(density))
+		#pprint('Weights Variance: '+ str(variance))
+
+
 	def run(self, v1, v2=None):
 		if v1 == 'l':
 			self.supervised_learn(algorithm='svm_prob')
@@ -1687,6 +1763,9 @@ class Prediction():
 		elif v1 == 'community':
 			self.update_network(150,318)
 			self.community_clique(5)
+		elif v1 == 'community_data':
+			self.update_network(150,486)
+			self.community_data();
 		elif v1 == 'draw':
 			self.update_network(1,24)
 			print('Getting the community')
@@ -1701,5 +1780,5 @@ if __name__ == '__main__':
 	arg1 = sys.argv[1]
 	arg2 = sys.argv[2]
 	
-	p = Prediction(N=200, m_type=arg2, t1=150, t2=318, t3=486, t4=654)
+	p = Prediction(N=100, m_type=arg2, t1=150, t2=318, t3=486, t4=654, f1='3', f2='100', f3='17')
 	p.run(arg1, arg2)
