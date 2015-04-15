@@ -29,7 +29,11 @@ class Cache():
 		with open(self.file_name_valid_users, 'wb') as csvfile:
 			datawriter = csv.writer(csvfile, delimiter=' ',quotechar='|', quoting=csv.QUOTE_MINIMAL)
 			for row in data:
-				datawriter.writerow([row])
+				try:
+					datawriter.writerow([row])
+				except Exception, e:
+					pass
+				
 
 	# REad valid users from file
 	def read_valid_users(self):

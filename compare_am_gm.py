@@ -1057,13 +1057,15 @@ class Prediction():
 
 		self.db.open()
 		#self.time_start, self.time_end = self.db.get_time_min_max()
-		self.time_start = 1422289905
+		#self.time_start = 1422289905
+		self.time_start = 788918400 	# For cond-mat
 
 		self.network = graph.SocialNetwork(0.1, self.users_valid, weighted=True)
 		self.network.initialize_nodes(self.users_valid)
 
 		# Get edges and construct the graph for 36 hours
-		self.delta_time = 3600 	# COnstruct at 1 hour interval
+		#self.delta_time = 3600 	# COnstruct at 1 hour interval
+		self.delta_time = 31536000 # One year for cond-mat
 
 		self.t1 = t1
 		self.t2 = t2
@@ -1210,6 +1212,8 @@ class Prediction():
 						f.append(rooted_page_rank[(n1,n2)])
 					else:
 						f.append(0)
+
+					print f
 
 					features.append(f)
 		return features, classes
@@ -1791,5 +1795,6 @@ if __name__ == '__main__':
 	arg1 = sys.argv[1]
 	arg2 = sys.argv[2]
 	
-	p = Prediction(N=100, m_type=arg2, t1=150, t2=318, t3=486, t4=654, f1='5', f2='100', f3='25')
+	#p = Prediction(N=100, m_type=arg2, t1=150, t2=318, t3=486, t4=654, f1='5', f2='100', f3='27')
+	p = Prediction(N=10000, m_type=arg2, t1=0, t2=2, t3=3, t4=4, f1='2', f2='cond-mat', f3='35')
 	p.run(arg1, arg2)
