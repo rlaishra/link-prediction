@@ -1043,9 +1043,9 @@ def compare_measures():
 class Prediction():
 	def __init__(self,N=10000,t1=1,t2=72,t3=144,t4=216, m_type=None, f1='3', f2='100', f3='11'):
 		self.community_size = int(f1)
-		self.f1 = f1
-		self.f2 = f2
-		self.f3 = f3
+		self.a1 = f1
+		self.a2 = f2
+		self.a3 = f3
 
 		self.vals = data.Data()
 		self.db = database.Database()
@@ -1089,6 +1089,8 @@ class Prediction():
 			self.m_type = m_type
 		else:
 			self.m_type = 'am'
+
+		print()
 
 	def cprint(self, v):
 		sys.stdout.write("\r%s" % v)
@@ -1303,7 +1305,7 @@ class Prediction():
 		plt.ylim([0.0, 1.05])
 		plt.xlabel('False Positive Rate')
 		plt.ylabel('True Positive Rate')
-		plt.savefig('img/roc-mtype-'+self.m_type+'-auc-'+str(auc)+'-k-'+str(self.f1)+'-density-'+str(self.density)+'.png')
+		plt.savefig('img/roc-mtype-'+self.m_type+'-auc-'+str(auc)+'-k-'+str(self.a1)+'-density-'+str(self.density)+'.png')
 
 	# Set weight of class 0; between 1 and 0
 	def learn_get_f1(self, weight0, features1, features2, classes1, classes2, report=False, algorithm='svm',w1=1,w0=1):
@@ -1444,7 +1446,7 @@ class Prediction():
 			print('Features 1')
 			features1, classes1 = self.get_features(self.t1,self.t2,sample=False, one_class=False, comm_sample=True)
 			print('Features 2')
-			features2, classes2 = self.get_features(self.t2,self.t3,sample=True)
+			features2, classes2 = self.get_features(self.t2,self.t3,sample=False)
 			print('Features 3')
 			features3, classes3 = self.get_features(self.t3,self.t4,sample=False, last=True)
 
@@ -1515,10 +1517,12 @@ class Prediction():
 		precision = TP/(TP+FP)
 		f1 = (2*recall*precision)/(recall+precision)
 
-		print('Accuracy: ' + str(accuracy))
-		print('Recall: ' + str(recall))
-		print('Precision: ' + str(precision))
-		print('F1: '+ str(f1))
+		#print('Accuracy: ' + str(accuracy))
+		#print('Recall: ' + str(recall))
+		#print('Precision: ' + str(precision))
+		#print('F1: '+ str(f1))
+		print('TPR: '+ str(TP/(TP+FN)))
+		print('FPR: '+ str(FP/(FP+TN)))
 		print((TP,TN,FP,FN))
 
 		return accuracy, recall, precision, f1
@@ -1682,7 +1686,7 @@ class Prediction():
 
 		
 		print('Fitting model')
-		clf = svm.OneClassSVM(nu=(206/9900), kernel="rbf", gamma=0.1)
+		clf = svm.OneClassSVM(nu=(220/9900), kernel="rbf", gamma=0.1)
 		clf.fit(features1)
 
 		print('Predicting')
@@ -1774,11 +1778,18 @@ class Prediction():
 			networkx.draw_networkx(self.network.get_graph(),pos=networkx.spring_layout(self.network.get_graph()),nodelist=self.users_sample)
 			print('Saving the graph')
 			plt.savefig('img/'+'network-'+v2+'.png')
+		elif v1 == 'links_count':
+			self.update_network(0,720)
+			positive = self.network.get_graph().number_of_edges()
+			nodes = self.network.get_graph().number_of_nodes()
+			negative = (nodes*nodes - nodes) - positive
+			print((nodes, positive, negative, positive/negative))
+			print(networkx.density(self.network.get_graph()))
 
 if __name__ == '__main__':
 	#compare_measures()
 	arg1 = sys.argv[1]
 	arg2 = sys.argv[2]
 	
-	p = Prediction(N=100, m_type=arg2, t1=150, t2=318, t3=486, t4=654, f1='3', f2='100', f3='17')
+	p = Prediction(N=100, m_type=arg2, t1=150, t2=318, t3=486, t4=654, f1='5', f2='100', f3='25')
 	p.run(arg1, arg2)

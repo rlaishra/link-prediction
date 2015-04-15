@@ -70,11 +70,11 @@ class DegreePlot():
 
 
 def main():
-	sample_size = 2500
+	sample_size = 5000
 	
 	fio = fileio.Fileio()
 
-	db = database.Database('database.db')
+	db = database.Database('db/database.db')
 	db.open()
 
 	# Get all the valid users
