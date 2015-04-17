@@ -18,6 +18,23 @@ class PageRankComaprison():
 			'time'			: [76,3619,5623,6234,6303],
 			'error'			: [22.3,18.7,13.7,12.4,11.9]
 		}
+
+		self._auc_no = {
+			'x' : [0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09],
+			'y' : [0.51, 0.63, 0.62, 0.59, 0.66, 0.71, 0.81, 0.83],
+		}
+
+		self._auc_am = {
+			'x' : [0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08],
+			'y' : [0.74, 0.79, 0.87, 0.87, 0.85, 0.87, 0.87]
+		}
+
+		self._density = {
+			'density' : [],
+			'weight' : []
+		}
+
+
 	def draw(self):
 		# Draw comparison between the two algorithms with varying sample size
 		plt.subplot(2,1,1)
@@ -52,7 +69,29 @@ class PageRankComaprison():
 		plt.savefig('page-rank-comparison-f.png')
 		plt.clf()
 
+	def drawAuc(self):
+		plt.plot(self._auc_no['x'], self._auc_no['y'], c='red')
+		plt.plot(self._auc_am['x'], self._auc_am['y'], c='blue')
+		plt.xlabel('Network Density')
+		plt.ylabel('AUC')
+		red_patch = mpatches.Patch(color='red', label='Non weighted features')
+		blue_patch = mpatches.Patch(color='blue', label='Weighted features')
+		plt.legend(handles=[red_patch, blue_patch], loc=4)
+
+		plt.savefig('auc-density.png')
+		plt.clf()
+
+	def drawDensity(self):
+		plt.plot(self._density['density'], self._density['weight'], c='blue')
+		plt.xlabel('Network Density')
+		plt.ylabel('Standard Deviation of edge weights')
+
+		plt.savefig('density-std.png')
+		plt.clf()
+
 if __name__ == '__main__':
 	pr = PageRankComaprison()
-	pr.draw()
-	pr.fdraw()
+	#pr.draw()
+	#pr.fdraw()
+	#pr.drawAuc()
+	pr.drawDensity()

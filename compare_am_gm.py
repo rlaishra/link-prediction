@@ -1057,15 +1057,15 @@ class Prediction():
 
 		self.db.open()
 		#self.time_start, self.time_end = self.db.get_time_min_max()
-		#self.time_start = 1422289905
-		self.time_start = 788918400 	# For cond-mat
+		self.time_start = 1422289905
+		#self.time_start = 788918400 	# For cond-mat
 
 		self.network = graph.SocialNetwork(0.1, self.users_valid, weighted=True)
 		self.network.initialize_nodes(self.users_valid)
 
 		# Get edges and construct the graph for 36 hours
-		#self.delta_time = 3600 	# COnstruct at 1 hour interval
-		self.delta_time = 31536000 # One year for cond-mat
+		self.delta_time = 3600 	# COnstruct at 1 hour interval
+		#self.delta_time = 31536000 # One year for cond-mat
 
 		self.t1 = t1
 		self.t2 = t2
@@ -1110,7 +1110,8 @@ class Prediction():
 	# if n is int, return nodes in all communities of size > n
 	def community_clique(self, k=4, n=False):
 		communities = networkx.k_clique_communities(self.network.get_graph().to_undirected(), k)
-		
+		pprint(k)
+
 		if not n:
 			max_size = 0
 			nodes = []
@@ -1213,8 +1214,6 @@ class Prediction():
 					else:
 						f.append(0)
 
-					print f
-
 					features.append(f)
 		return features, classes
 
@@ -1226,7 +1225,7 @@ class Prediction():
 			self.get_sample(edges)
 
 		if comm_sample:
-			self.community_clique(self.community_size,n=False)
+			self.community_clique(self.community_size, n=False)
 
 		features = []
 		classes = []
@@ -1705,29 +1704,37 @@ class Prediction():
 
 	def community_data(self):
 		graph = self.network.get_graph()
-			
-		for x in xrange(3,6):
-			self.community_clique(x)
-			size = len(self.users_sample)
+		
+		for x in xrange(3,7):
+			for i in xrange(1,10):
+				self.community_clique(x, n=True)
+				size = len(self.users_sample)
 
-			print(x)
-			print('Community size: '+str(size))
+				print(x)
+				print('Community size: '+str(size))
 
 
-			#Density
-			d1 = 0
-			weights = []
+				#Density
+				d1 = 0
+				weights = []
 
-			for n in self.users_sample:
-				#pprint(graph[n])
-				w = [graph[n][m]['weight'] for m in graph[n].keys() if m in self.users_sample]
-				weights += w
-				d1 += len(w)
+				for n in self.users_sample:
+					#pprint(graph[n])
+					w = [graph[n][m]['weight'] for m in graph[n].keys() if m in self.users_sample]
+					d1 += len(w)
+					#w = [graph[n][m]['weight'] for m in graph[n].keys()]
+					weights += w
 
-			density = d1/(size*(size - 1))
+				density = d1/(size*(size - 1))
+				#mean = numpy.mean(weights)
+				#count = len(weights)
+				#weights = [x for x in weights if x > mean*0.75 and x < mean * 1.25]
 
-			print('Density: '+str(density))
-			pprint('Weights Variance: '+ str(numpy.var(weights)))
+
+				print('Density: '+str(density))
+				pprint('Weights Std: '+ str(numpy.std(weights)))
+				
+
 
 	def sample_data(self):
 		graph = self.network.get_graph()
@@ -1746,13 +1753,13 @@ class Prediction():
 			d1 += len(w)
 
 		density = d1/(size*(size - 1))
-		#variance = numpy.var(weights)
+		variance = numpy.var(weights)
 
 		self.density = str(density)
-		#self.variance = str(variance)
+		self.variance = str(variance)
 
 		print('Density: '+str(density))
-		#pprint('Weights Variance: '+ str(variance))
+		pprint('Weights Variance: '+ str(variance))
 
 
 	def run(self, v1, v2=None):
@@ -1773,6 +1780,7 @@ class Prediction():
 			self.community_clique(5)
 		elif v1 == 'community_data':
 			self.update_network(150,486)
+			#self.update_network(150,654)
 			self.community_data();
 		elif v1 == 'draw':
 			self.update_network(1,24)
@@ -1795,6 +1803,6 @@ if __name__ == '__main__':
 	arg1 = sys.argv[1]
 	arg2 = sys.argv[2]
 	
-	#p = Prediction(N=100, m_type=arg2, t1=150, t2=318, t3=486, t4=654, f1='5', f2='100', f3='27')
-	p = Prediction(N=10000, m_type=arg2, t1=0, t2=2, t3=3, t4=4, f1='2', f2='cond-mat', f3='35')
+	p = Prediction(N=100, m_type=arg2, t1=150, t2=318, t3=486, t4=654, f1='7', f2='100', f3='28')
+	#p = Prediction(N=100, m_type=arg2, t1=0, t2=2, t3=3, t4=4, f1='6', f2='cond-mat', f3='41')
 	p.run(arg1, arg2)
