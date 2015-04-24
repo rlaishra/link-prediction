@@ -50,6 +50,7 @@ class MeasuresNoWeight():
 				self._common_neighbors[(nodes[i], nodes[j])] = len(neighbors_out) + len(neighbors_in)
 				self._common_neighbors[(nodes[j], nodes[i])] = self._common_neighbors[(nodes[i], nodes[j])]
 		print('')
+		#print(type(self._common_neighbors))
 		return self._common_neighbors
 
 	def cprint(self, v):
@@ -268,11 +269,17 @@ class MeasuresWeightAM():
 	def __init__(self, network):
 		self._network = network
 
-		self._common_neighbors 	= None
-		self._jaccard_coefficient = None
-		self._adamic_adar = None
-		self._preferentail_attachment = None
-		self._shortest_path = None
+		self._common_neighbors_in 	= None
+		self._jaccard_coefficient_in = None
+		self._adamic_adar_in = None
+		self._preferentail_attachment_in = None
+		self._shortest_path_in = None
+
+		self._common_neighbors_out 	= None
+		self._jaccard_coefficient_out = None
+		self._adamic_adar_out = None
+		self._preferentail_attachment_out = None
+		self._shortest_path_out = None
 
 	def cprint(self, v):
 		sys.stdout.write("\r%s" % v)
@@ -280,7 +287,8 @@ class MeasuresWeightAM():
 
 	def common_neighbors(self, nodes=None):
 		# If common neighbors has not been calculates, calculate it
-		self._common_neighbors = {}
+		self._common_neighbors_in = {}
+		self._common_neighbors_out = {}
 
 		if nodes is None:
 			nodes = self._network.get_sample_nodes()
@@ -290,16 +298,21 @@ class MeasuresWeightAM():
 		for i in xrange(0, len(nodes)):
 			self.cprint(str(i+1)+'/'+str(len(nodes)))
 			for j in xrange(i, len(nodes)):
-				neighbors_out = list(set.intersection(set(graph[nodes[i]].keys()), set(graph[nodes[j]].keys())))
 				neighbors_in = list(set.intersection(set(rgraph[nodes[i]].keys()), set(rgraph[nodes[j]].keys())))
+				neighbors_out = list(set.intersection(set(graph[nodes[i]].keys()), set(graph[nodes[j]].keys())))
 
-				self._common_neighbors[(nodes[i], nodes[j])] = sum([ (graph[nodes[i]][x]['weight'] + graph[nodes[j]][x]['weight'])/2 for x in neighbors_out]) + sum([ (rgraph[nodes[i]][x]['weight'] + rgraph[nodes[j]][x]['weight'])/2 for x in neighbors_in])
-				self._common_neighbors[(nodes[j], nodes[i])] = self._common_neighbors[(nodes[i], nodes[j])]
+				self._common_neighbors_in[(nodes[i], nodes[j])] = sum([ (rgraph[nodes[i]][x]['weight'] + rgraph[nodes[j]][x]['weight'])/2 for x in neighbors_in])
+				self._common_neighbors_in[(nodes[j], nodes[i])] = self._common_neighbors_in[(nodes[i], nodes[j])]
+
+				self._common_neighbors_out[(nodes[i], nodes[j])] = sum([ (graph[nodes[i]][x]['weight'] + graph[nodes[j]][x]['weight'])/2 for x in neighbors_out])
+				self._common_neighbors_out[(nodes[j], nodes[i])] = self._common_neighbors_out[(nodes[i], nodes[j])]
+
 		print('')
-		return self._common_neighbors
+		return self._common_neighbors_in, self._common_neighbors_out
 
 	def adamic_adar(self, nodes=None):
-		self._adamic_adar = {}
+		self._adamic_adar_in = {}
+		self._adamic_adar_out = {}
 
 		if nodes is None:
 			nodes = self._network.get_sample_nodes()
@@ -309,22 +322,24 @@ class MeasuresWeightAM():
 		for i in xrange(0, len(nodes)):
 			self.cprint(str(i+1)+'/'+str(len(nodes)))
 			for j in xrange(i, len(nodes)):
-				neighbors_out = list(set.intersection(set(graph[nodes[i]].keys()), set(graph[nodes[j]].keys())))
 				neighbors_in = list(set.intersection(set(rgraph[nodes[i]].keys()), set(rgraph[nodes[j]].keys())))
-
-				#adamic_adar_out = sum([ (graph[nodes[i]][x]['weight'] + graph[nodes[j]][x]['weight'])/(2 * math.log(max(1.01, sum([graph[x][z]['weight'] for z in graph[x] ])))) for x in neighbors_out ])
-				#adamic_adar_in = sum([ (rgraph[nodes[i]][x]['weight'] + rgraph[nodes[j]][x]['weight'])/(2 * math.log(max(1.01, sum([rgraph[x][z]['weight'] for z in rgraph[x] ])))) for x in neighbors_in ])
+				neighbors_out = list(set.intersection(set(graph[nodes[i]].keys()), set(graph[nodes[j]].keys())))
 
 				adamic_adar_out = sum([ (graph[nodes[i]][x]['weight'] + graph[nodes[j]][x]['weight'])/(2 * math.log(1.001 + sum([graph[x][z]['weight'] for z in graph[x] ]))) for x in neighbors_out ])
 				adamic_adar_in = sum([ (rgraph[nodes[i]][x]['weight'] + rgraph[nodes[j]][x]['weight'])/(2 * math.log(1.001 + sum([rgraph[x][z]['weight'] for z in rgraph[x] ]))) for x in neighbors_in ])
 
-				self._adamic_adar[(nodes[i], nodes[j])] = adamic_adar_in + adamic_adar_out
-				self._adamic_adar[(nodes[j], nodes[i])] = self._adamic_adar[(nodes[i], nodes[j])]
+				self._adamic_adar_in[(nodes[i], nodes[j])] = adamic_adar_in
+				self._adamic_adar_in[(nodes[j], nodes[i])] = adamic_adar_in
+
+				self._adamic_adar_out[(nodes[i], nodes[j])] = adamic_adar_out
+				self._adamic_adar_out[(nodes[j], nodes[i])] = adamic_adar_out
+
 		print('')
-		return self._adamic_adar
+		return self._adamic_adar_in, self._adamic_adar_out
 
 	def preferentail_attachment(self, nodes=None):
-		self._preferentail_attachment = {}
+		self._preferentail_attachment_in = {}
+		self._preferentail_attachment_out = {}
 
 		if nodes is None:
 			nodes = self._network.get_sample_nodes()
@@ -334,14 +349,19 @@ class MeasuresWeightAM():
 		for i in xrange(0, len(nodes)):
 			self.cprint(str(i+1)+'/'+str(len(nodes)))
 			for j in xrange(i, len(nodes)):
-				self._preferentail_attachment[(nodes[i], nodes[j])] = sum([ graph[nodes[i]][x]['weight'] for x in graph[nodes[i]] ])*sum([ graph[nodes[j]][x]['weight'] for x in graph[nodes[j]] ]) + sum([ rgraph[nodes[i]][x]['weight'] for x in rgraph[nodes[i]] ])*sum([ rgraph[nodes[j]][x]['weight'] for x in rgraph[nodes[j]] ])
-				self._preferentail_attachment[(nodes[j], nodes[i])] = self._preferentail_attachment[(nodes[i], nodes[j])]
+				self._preferentail_attachment_in[(nodes[i], nodes[j])] = sum([ rgraph[nodes[i]][x]['weight'] for x in rgraph[nodes[i]] ])*sum([ rgraph[nodes[j]][x]['weight'] for x in rgraph[nodes[j]] ])
+				self._preferentail_attachment_in[(nodes[j], nodes[i])] = self._preferentail_attachment_in[(nodes[i], nodes[j])]
+
+				self._preferentail_attachment_out[(nodes[i], nodes[j])] = sum([ graph[nodes[i]][x]['weight'] for x in graph[nodes[i]] ])*sum([ graph[nodes[j]][x]['weight'] for x in graph[nodes[j]] ])
+				self._preferentail_attachment_out[(nodes[j], nodes[i])] = self._preferentail_attachment_out[(nodes[i], nodes[j])]
+		
 		print('')
-		return self._preferentail_attachment
+		return self._preferentail_attachment_in, self._preferentail_attachment_out
 
 	# Extended jaccard coefficient
 	def jaccard_coefficient(self, nodes=None):
-		self._jaccard_coefficient = {}
+		self._jaccard_coefficient_in = {}
+		self._jaccard_coefficient_out = {}
 
 		if nodes is None:
 			nodes = self._network.get_sample_nodes()
@@ -369,10 +389,14 @@ class MeasuresWeightAM():
 				if len(neighbors_in_union) > 0 :
 					jac_in = numpy.dot(x_in, y_in)/max(1,(math.pow(numpy.linalg.norm(x_in),2) + math.pow(numpy.linalg.norm(y_in),2) - numpy.dot(x_in,y_in)))
 				
-				self._jaccard_coefficient[(nodes[i], nodes[j])] = jac_out + jac_in
-				self._jaccard_coefficient[(nodes[j], nodes[i])] = self._jaccard_coefficient[(nodes[i], nodes[j])]
+				self._jaccard_coefficient_in[(nodes[i], nodes[j])] = jac_in
+				self._jaccard_coefficient_in[(nodes[j], nodes[i])] = self._jaccard_coefficient_in[(nodes[i], nodes[j])]
+
+				self._jaccard_coefficient_out[(nodes[i], nodes[j])] = jac_out 
+				self._jaccard_coefficient_out[(nodes[j], nodes[i])] = self._jaccard_coefficient_out[(nodes[i], nodes[j])]
+
 		print('')
-		return self._jaccard_coefficient
+		return self._jaccard_coefficient_in, self._jaccard_coefficient_out
 
 	def shortest_path(self, nodes=None):
 		self._shortest_path = {}
@@ -838,10 +862,15 @@ def rank_list(v):
 # Median rank of for the measure
 # R is cutoff rank for recall; nodes with rank less than or equal to R are considered as predicted
 # Less is better
-def get_recall(predicted_list, actual_list, R=50, directed=False):
+def get_recall(predicted_list, actual_list, R=50, directed=False, predicted_list2 = []):
 	pre = predicted_list
 	ranks = []
-	predicted_list = rank_list(predicted_list)
+
+	if len(predicted_list2) > 0 :
+		predicted_list = rank_list_agg(predicted_list, predicted_list2)
+	else:
+		predicted_list = rank_list(predicted_list)
+	
 	for n1 in actual_list.keys():
 		for n2 in actual_list[n1].keys():
 			if actual_list[n1][n2] < 1 :
@@ -863,6 +892,52 @@ def get_recall(predicted_list, actual_list, R=50, directed=False):
 	#pprint(len(ranks))
 	#pprint(ranks[:count])
 	return count/len(ranks)
+
+# Aggregated rank list
+def rank_list_agg(v1, v2):
+	s1 = sorted(v1.items(), key=operator.itemgetter(1), reverse=True)
+	s2 = sorted(v2.items(), key=operator.itemgetter(1), reverse=True)
+
+	rank_list1 = {}
+	rank_list2 = {}
+	rank_list = {}
+	prev = None
+	r = 1
+	c = 0
+	s1_edges = []
+	for x in xrange(0, len(s1)):
+		if (s1[x][1] == 0) or (s1[x][0][0] == s1[x][0][1]):
+			continue
+		if prev is None or s1[x][1] < prev :
+			r += c 
+			c = 0
+			prev = s1[x][1]
+		rank_list1[(s1[x][0])] = r
+		s1_edges.append((s1[x][0]))
+		c += 1
+	prev = None
+	r = 1
+	c = 0
+	s2_edges = []
+	for x in xrange(0, len(s2)):
+		if (s2[x][1] == 0) or (s2[x][0][0] == s2[x][0][1]):
+			continue
+		if prev is None or s2[x][1] < prev :
+			r += c 
+			c = 0
+			prev = s2[x][1]
+		rank_list2[(s2[x][0])] = r
+		s2_edges.append((s2[x][0]))
+		c += 1
+
+	edge_list = list(set(s1_edges).intersection(set(s2_edges)))
+
+	# Combile the two rank lists
+	for edge in edge_list:
+		rank_list[edge] = (rank_list1[edge] + rank_list2[edge])/2
+
+	#pprint(rank_list)
+	return rank_list
 
 # Get the product of the items in the list
 def product_list(val):
@@ -903,8 +978,8 @@ def compare_measures():
 	users_sample = users_valid[:10000]
 
 	db.open()
-	time_start, time_end = db.get_time_min_max()
-	#time_start = 1422289905
+	#time_start, time_end = db.get_time_min_max()
+	time_start = 1422289905
 
 	network = graph.SocialNetwork(0.1, users_valid)
 	network.initialize_nodes(users_valid)
@@ -947,31 +1022,31 @@ def compare_measures():
 		#print('No weight common neighbors')
 		#pred = n_noweight.common_neighbors(users_sample)
 		#print('Calculating recall no weight common neighbors')
-		#pprint(get_recall(pred, edges, R=R))
+		#pprint(get_recall(pred, edges, directed=True, R=R))
 
 		#print('')
 		#print('AM weight common neighbors')
-		#pred = a_noweight.common_neighbors(users_sample)
+		#pred1, pred2 = a_noweight.common_neighbors(users_sample)
 		#print('Calculating recall AM weight common neighbors')
-		#pprint(get_recall(pred, edges, R=R))
+		#pprint(get_recall(pred, edges, directed=True, R=R, predicted_list2=pred2))
 
 		#print('')
 		#print('GM weight common neighbors')
-		#pred = g_noweight.common_neighbors(users_sample)
+		#pred1, pred2 = g_noweight.common_neighbors(users_sample)
 		#print('Calculating recall GM weight common neighbors')
-		#pprint(get_recall(pred, edges, R=R))
+		#pprint(get_recall(pred, edges, R=R, predicted_list2=pred2))
 
 		#print('')
 		#print('No weight adamic adar')
 		#pred = n_noweight.adamic_adar(users_sample)
 		#print('Calculating recall no weight adamic adar')
-		#pprint(get_recall(pred, edges, R=R))
+		#pprint(get_recall(pred, edges, directed=True, R=R))
 
 		#print('')
 		#print('AM weight adamic adar')
-		#pred = a_noweight.adamic_adar(users_sample)
+		#pred1, pred2 = a_noweight.adamic_adar(users_sample)
 		#print('Calculating recall AM weight adamic adar')
-		#pprint(get_recall(pred, edges, R=R))
+		#pprint(get_recall(pred, edges, directed=True, R=R, predicted_list2=pred2))
 
 		#print('')
 		#print('GM weight adamic adar')
@@ -983,13 +1058,13 @@ def compare_measures():
 		#print('No weight adamic adar')
 		#pred = n_noweight.preferentail_attachment(users_sample)
 		#print('Calculating recall no weight preferentail attachment')
-		#pprint(get_recall(pred, edges, R=R))
+		#pprint(get_recall(pred, edges, directed=True, R=R))
 
 		#print('')
 		#print('AM weight adamic adar')
-		#pred = a_noweight.preferentail_attachment(users_sample)
+		#pred1, pred2 = a_noweight.preferentail_attachment(users_sample)
 		#print('Calculating recall AM weight preferentail attachment')
-		#pprint(get_recall(pred, edges, R=R))
+		#pprint(get_recall(pred, edges, directed=True, R=R, predicted_list2=pred2))
 
 		#print('')
 		#print('GM weight adamic adar')
@@ -997,16 +1072,16 @@ def compare_measures():
 		#print('Calculating recall GM weight preferentail attachment')
 		#pprint(get_recall(pred, edges, R=R))
 
-		#print('')
-		#pred = n_noweight.jaccard_coefficient(users_sample)
-		#print('Calculating recall no weight jaccard_coefficient')
-		#pprint(get_recall(pred, edges, R=R))
+		print('')
+		pred = n_noweight.jaccard_coefficient(users_sample)
+		print('Calculating recall no weight jaccard_coefficient')
+		pprint(get_recall(pred, edges, directed=True, R=R))
 
-		#print('')
-		#print('GM weight adamic adar')
-		#pred = a_noweight.jaccard_coefficient(users_sample)
-		#print('Calculating recall weighted jaccard_coefficient')
-		#pprint(get_recall(pred, edges, R=R))
+		print('')
+		print('GM weight adamic adar')
+		pred1, pred2 = a_noweight.jaccard_coefficient(users_sample)
+		print('Calculating recall weighted jaccard_coefficient')
+		pprint(get_recall(pred, edges, directed=True, R=R, predicted_list2=pred2))
 	
 		#pred = n_noweight.shortest_path(users_sample)
 		#print('Calculating recall not weighted shortest path')
@@ -1032,13 +1107,13 @@ def compare_measures():
 		#print('Calculating recall GM weighted katz score')
 		#pprint(get_recall(pred, edges, R=R, directed=True))
 		
-		pred = n_noweight.page_rank(users_sample)
-		print('Calculating recall not weighted rooted page rank')
-		pprint(get_recall(pred, edges, R=R, directed=True))
+		#pred = n_noweight.page_rank(users_sample)
+		#print('Calculating recall not weighted rooted page rank')
+		#pprint(get_recall(pred, edges, R=R, directed=True))
 
-		pred = a_noweight.page_rank(users_sample)
-		print('Calculating recall weighted rooted page rank')
-		pprint(get_recall(pred, edges, R=R, directed=True))
+		#pred = a_noweight.page_rank(users_sample)
+		#print('Calculating recall weighted rooted page rank')
+		#pprint(get_recall(pred, edges, R=R, directed=True))
 
 class Prediction():
 	def __init__(self,N=10000,t1=1,t2=72,t3=144,t4=216, m_type=None, f1='3', f2='100', f3='11'):
@@ -1076,10 +1151,10 @@ class Prediction():
 
 		self.directory = 'cache/'
 
-		self.f1 = 'cache-learning-features-k'+f1+'-'+f2+'-168-'+m_type+'-'+f3+'.csv'
-		self.c1 = 'cache-learning-class-k'+f1+'-'+f2+'-168-'+m_type+'-'+f3+'.csv'
-		self.f2 = 'cache-test-features-k'+f1+'-'+f2+'-168-'+m_type+'-'+f3+'.csv'
-		self.c2 = 'cache-test-class-k'+f1+'-'+f2+'-168-'+m_type+'-'+f3+'.csv'
+		self.f1 = 's-cache-learning-features-k'+f1+'-'+f2+'-168-'+m_type+'-'+f3+'.csv'
+		self.c1 = 's-cache-learning-class-k'+f1+'-'+f2+'-168-'+m_type+'-'+f3+'.csv'
+		self.f2 = 's-cache-test-features-k'+f1+'-'+f2+'-168-'+m_type+'-'+f3+'.csv'
+		self.c2 = 's-cache-test-class-k'+f1+'-'+f2+'-168-'+m_type+'-'+f3+'.csv'
 
 		#self.f1 = 'cache-learning-features-test-data.csv'
 		#self.c1 = 'cache-learning-class-test-data.csv'
@@ -1179,40 +1254,47 @@ class Prediction():
 						classes.append(0)
 
 					f = []
-					if (n1,n2) in common_neighbors :
-						f.append(common_neighbors[(n1,n2)])
-					else:
-						f.append(0)
+					for d in common_neighbors:
+						if (n1,n2) in d :
+							f.append(d[(n1,n2)])
+						else:
+							f.append(0)
 
-					if (n1,n2) in adamic_adar :
-						f.append(adamic_adar[(n1,n2)])
-					else:
-						f.append(0)
+					for d in adamic_adar:
+						if (n1,n2) in d :
+							f.append(d[(n1,n2)])
+						else:
+							f.append(0)
 
-					if (n1,n2) in jaccard_coefficient :
-						f.append(jaccard_coefficient[(n1,n2)])
-					else:
-						f.append(0)
+					for d in jaccard_coefficient:
+						if (n1,n2) in d :
+							f.append(d[(n1,n2)])
+						else:
+							f.append(0)
 
-					if (n1,n2) in preferentail_attachment :
-						f.append(preferentail_attachment[(n1,n2)])
-					else:
-						f.append(0)
+					for d in preferentail_attachment:
+						if (n1,n2) in d :
+							f.append(d[(n1,n2)])
+						else:
+							f.append(0)
 
-					if (n1,n2) in katz_score :
-						f.append(katz_score[(n1,n2)])
-					else:
-						f.append(0)
+					for d in katz_score:
+						if (n1,n2) in d :
+							f.append(d[(n1,n2)])
+						else:
+							f.append(0)
 
-					if (n1,n2) in shortest_path :
-						f.append(shortest_path[(n1,n2)])
-					else:
-						f.append(0)
+					for d in shortest_path:
+						if (n1,n2) in d :
+							f.append(d[(n1,n2)])
+						else:
+							f.append(0)
 
-					if (n1,n2) in rooted_page_rank :
-						f.append(rooted_page_rank[(n1,n2)])
-					else:
-						f.append(0)
+					for d in rooted_page_rank:
+						if (n1,n2) in d :
+							f.append(d[(n1,n2)])
+						else:
+							f.append(0)
 
 					features.append(f)
 		return features, classes
@@ -1225,7 +1307,7 @@ class Prediction():
 			self.get_sample(edges)
 
 		if comm_sample:
-			self.community_clique(self.community_size, n=False)
+			self.community_clique(self.community_size, n=True)
 
 		features = []
 		classes = []
@@ -1241,27 +1323,53 @@ class Prediction():
 		else:
 			mes = MeasuresWeightGM(self.network)
 
-		print('Common neighbors')
-		common_neighbors = mes.common_neighbors(self.users_sample)
-		print('Adamic Adar')
-		adamic_adar = mes.adamic_adar(self.users_sample)
-		print('Preferential Attachment')
-		preferentail_attachment = mes.preferentail_attachment(self.users_sample)
-		print('Jaccard Coefficient')
-		jaccard_coefficient = mes.jaccard_coefficient(self.users_sample)
+		common_neighbors = []
+		adamic_adar = []
+		preferentail_attachment = []
+		jaccard_coefficient = []
+		rooted_page_rank = []
+		katz_score = []
+		shortest_path = []
+
+		if self.m_type == 'am':
+			print('Common neighbors')
+			mes_in, mes_out = mes.common_neighbors(self.users_sample)
+			common_neighbors.append(mes_in)
+			common_neighbors.append(mes_out)
+			print('Adamic Adar')
+			mes_in, mes_out = mes.adamic_adar(self.users_sample)
+			adamic_adar.append(mes_in)
+			adamic_adar.append(mes_out)
+			print('Preferential Attachment')
+			mes_in, mes_out = mes.preferentail_attachment(self.users_sample)
+			preferentail_attachment.append(mes_in)
+			preferentail_attachment.append(mes_out)
+			print('Jaccard Coefficient')
+			mes_in, mes_out = mes.jaccard_coefficient(self.users_sample)
+			jaccard_coefficient.append(mes_in)
+			jaccard_coefficient.append(mes_out)
+		else:
+			print('Common neighbors')
+			common_neighbors.append(mes.common_neighbors(self.users_sample))
+			print('Adamic Adar')
+			adamic_adar.append(mes.adamic_adar(self.users_sample))
+			print('Preferential Attachment')
+			preferentail_attachment.append(mes.preferentail_attachment(self.users_sample))
+			print('Jaccard Coefficient')
+			jaccard_coefficient.append(mes.jaccard_coefficient(self.users_sample))
 		
 		if self.m_type != 'no' or True:
 			print('Rooted Page Rank')
-			rooted_page_rank = mes.page_rank(self.users_sample)
+			rooted_page_rank.append(mes.page_rank(self.users_sample))
 			print('Katz Score')
-			katz_score = mes.katz_score(self.users_sample)
+			katz_score.append(mes.katz_score(self.users_sample))
 			print('Shortest Path')
-			shortest_path = mes.shortest_path(self.users_sample)
+			shortest_path.append(mes.shortest_path(self.users_sample))
 			
 		else:
-			rooted_page_rank = [0]*len(jaccard_coefficient)
-			katz_score = [0]*len(jaccard_coefficient)
-			shortest_path = [0]*len(jaccard_coefficient)
+			rooted_page_rank.append([0]*len(jaccard_coefficient))
+			katz_score.append([0]*len(jaccard_coefficient))
+			shortest_path.append([0]*len(jaccard_coefficient))
 
 		print('Constructing features')
 		features, classes = self.construct_features(edges, common_neighbors, adamic_adar, preferentail_attachment, jaccard_coefficient, shortest_path, katz_score, rooted_page_rank, one_class=one_class)
@@ -1707,11 +1815,11 @@ class Prediction():
 		
 		for x in xrange(3,7):
 			for i in xrange(1,10):
-				self.community_clique(x, n=True)
+				self.community_clique(x, n=False)
 				size = len(self.users_sample)
 
-				print(x)
-				print('Community size: '+str(size))
+				#print(x)
+				#print('Community size: '+str(size))
 
 
 				#Density
@@ -1733,7 +1841,7 @@ class Prediction():
 
 				print('Density: '+str(density))
 				pprint('Weights Std: '+ str(numpy.std(weights)))
-				
+				print('')
 
 
 	def sample_data(self):
@@ -1760,6 +1868,9 @@ class Prediction():
 
 		print('Density: '+str(density))
 		pprint('Weights Variance: '+ str(variance))
+
+	def save_network(self):
+		pass
 
 
 	def run(self, v1, v2=None):
@@ -1799,10 +1910,10 @@ class Prediction():
 			print(networkx.density(self.network.get_graph()))
 
 if __name__ == '__main__':
-	#compare_measures()
-	arg1 = sys.argv[1]
-	arg2 = sys.argv[2]
+	compare_measures()
+	#arg1 = sys.argv[1]
+	#arg2 = sys.argv[2]
 	
-	p = Prediction(N=100, m_type=arg2, t1=150, t2=318, t3=486, t4=654, f1='7', f2='100', f3='28')
+	#p = Prediction(N=100, m_type=arg2, t1=150, t2=318, t3=486, t4=654, f1='5', f2='100', f3='30')
 	#p = Prediction(N=100, m_type=arg2, t1=0, t2=2, t3=3, t4=4, f1='6', f2='cond-mat', f3='41')
-	p.run(arg1, arg2)
+	#p.run(arg1, arg2)
