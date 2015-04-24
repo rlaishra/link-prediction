@@ -1867,7 +1867,7 @@ class Prediction():
 		self.variance = str(variance)
 
 		print('Density: '+str(density))
-		pprint('Weights Variance: '+ str(variance))
+		print('Weights Variance: '+ str(variance))
 
 	def save_network(self):
 		pass

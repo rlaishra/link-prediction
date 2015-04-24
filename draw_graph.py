@@ -25,13 +25,13 @@ class PageRankComaprison():
 		}
 
 		self._auc_am = {
-			'x' : [0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08],
-			'y' : [0.74, 0.79, 0.87, 0.87, 0.85, 0.87, 0.87]
+			'x' : [0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09],
+			'y' : [0.74, 0.79, 0.87, 0.87, 0.86, 0.87, 0.87, 0.87]
 		}
 
 		self._density = {
-			'density' : [],
-			'weight' : []
+			'density' : [0.01, 0.03, 0.04, 0.05, ],
+			'weight' : [1.29, 0.47, 0.33, 0.31, ]
 		}
 
 
@@ -93,5 +93,5 @@ if __name__ == '__main__':
 	pr = PageRankComaprison()
 	#pr.draw()
 	#pr.fdraw()
-	#pr.drawAuc()
-	pr.drawDensity()
+	pr.drawAuc()
+	#pr.drawDensity()
